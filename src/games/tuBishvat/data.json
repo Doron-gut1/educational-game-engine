@@ -1,0 +1,152 @@
+{
+  "intro": {
+    "title": "המסע הקסום בארץ שבעת המינים",
+    "background": "forest_background.jpg",
+    "dialogue": [
+      {
+        "character": "forest_keeper",
+        "text": "ילדים יקרים! אני שומר הטבע של ארץ ישראל. דור אחר דור אנחנו שומרים על האדמה המיוחדת שלנו, על העצים ועל הפירות המיוחדים שה' נתן לנו."
+      },
+      {
+        "character": "forest_keeper",
+        "text": "השנה, לקראת טו בשבט, אני צריך את עזרתכם במשימה מיוחדת - לגלות את הסודות של שבעת המינים ולהבין למה הם כל כך חשובים לנו."
+      },
+      {
+        "character": "forest_keeper",
+        "text": "האם תעזרו לי לשמור על ארץ ישראל היפה שלנו?"
+      }
+    ],
+    "actionButton": {
+      "text": "בואו נתחיל!",
+      "next": "stage1"
+    }
+  },
+  "stages": [
+    {
+      "id": "stage1",
+      "type": "multi_choice",
+      "title": "נטיעות בארץ ישראל",
+      "description": "עזרו לעצים למצוא את המקום המתאים להם",
+      "background": "planting_background.jpg",
+      "character": "forest_keeper",
+      "questions": [
+        {
+          "id": "q1",
+          "text": "איזה מהעצים הבאים אינו משבעת המינים?",
+          "options": [
+            {"id": "a", "text": "זית", "correct": false},
+            {"id": "b", "text": "תמר", "correct": false},
+            {"id": "c", "text": "ברוש", "correct": true},
+            {"id": "d", "text": "תאנה", "correct": false}
+          ],
+          "explanation": "הברוש אינו משבעת המינים המוזכרים בתורה: חיטה, שעורה, גפן, תאנה, רימון, זית ותמר (דבש).",
+          "difficulty": {
+            "easy": {"options": ["a", "b", "c"]},
+            "medium": {"options": ["a", "b", "c", "d"]},
+            "hard": {"options": ["a", "b", "c", "d", "e", "f"], "additionalOptions": [
+              {"id": "e", "text": "רימון", "correct": false},
+              {"id": "f", "text": "אלון", "correct": true}
+            ]}
+          }
+        },
+        {
+          "id": "q2",
+          "text": "מתי חל טו בשבט?",
+          "options": [
+            {"id": "a", "text": "ט"ו בשבט", "correct": true},
+            {"id": "b", "text": "ט"ו בתמוז", "correct": false},
+            {"id": "c", "text": "א' בשבט", "correct": false},
+            {"id": "d", "text": "ראש השנה", "correct": false}
+          ],
+          "explanation": "טו בשבט (ט"ו בשבט) הוא החמישה עשר בחודש שבט, ומכונה 'ראש השנה לאילנות'."
+        }
+      ],
+      "reward": {
+        "item": "watering_can",
+        "description": "מצאתם את כלי ההשקיה הקסום!"
+      }
+    },
+    {
+      "id": "stage2",
+      "type": "drag_drop",
+      "title": "שמירה על הסביבה",
+      "description": "מיינו את הפעולות לפי השפעתן על הסביבה",
+      "character": "forest_keeper",
+      "items": [
+        {"id": "item1", "text": "נטיעת עצים", "category": "good"},
+        {"id": "item2", "text": "השקיה חסכונית", "category": "good"},
+        {"id": "item3", "text": "זריקת פסולת בטבע", "category": "bad"},
+        {"id": "item4", "text": "שימוש בקומפוסט", "category": "good"},
+        {"id": "item5", "text": "בזבוז מים", "category": "bad"},
+        {"id": "item6", "text": "איסוף זרעים", "category": "good"}
+      ],
+      "dropZones": [
+        {"id": "good", "label": "טוב לסביבה"},
+        {"id": "bad", "label": "מזיק לסביבה"}
+      ]
+    },
+    {
+      "id": "stage3",
+      "type": "matching",
+      "title": "ברכות ושבעת המינים",
+      "description": "התאימו כל פרי לברכה המתאימה לו",
+      "character": "wise_olive",
+      "pairs": [
+        {
+          "id": 1,
+          "item1": {"type": "text", "content": "זית"},
+          "item2": {"type": "text", "content": "בורא פרי העץ"}
+        },
+        {
+          "id": 2,
+          "item1": {"type": "text", "content": "חיטה"},
+          "item2": {"type": "text", "content": "בורא מיני מזונות"}
+        },
+        {
+          "id": 3,
+          "item1": {"type": "text", "content": "ענבים"},
+          "item2": {"type": "text", "content": "בורא פרי הגפן"}
+        }
+      ]
+    }
+  ],
+  "boss_challenge": {
+    "id": "final_challenge",
+    "type": "combined_challenge",
+    "title": "האתגר הגדול של שבעת המינים",
+    "description": "השלימו את האתגר האחרון כדי להציל את היער",
+    "parts": [
+      {"type": "drag_drop", "id": "arrange_fruits"},
+      {"type": "matching", "id": "match_blessings"}
+    ],
+    "character": "wise_olive",
+    "dialogue": [
+      {"text": "הגעתם לאתגר האחרון! השתמשו בכל הידע שצברתם..."}
+    ],
+    "reward": {
+      "item": "golden_seed",
+      "description": "זרע הזהב - סמל לחיים חדשים ושמירה על הטבע!"
+    }
+  },
+  "outro": {
+    "title": "כל הכבוד!",
+    "background": "celebration_background.jpg",
+    "dialogue": [
+      {
+        "character": "forest_keeper",
+        "text": "ילדים יקרים, הצלחתם במשימה! עזרתם לשמור על היער..."
+      }
+    ],
+    "rewards": [
+      {
+        "name": "תעודת שומר יער",
+        "image": "certificate.png",
+        "description": "הפכתם לשומרי יער רשמיים!"
+      }
+    ],
+    "actionButton": {
+      "text": "שחק שוב",
+      "action": "restart"
+    }
+  }
+}

@@ -1,13 +1,16 @@
 /**
  * תבנית משחק חדר בריחה
- * משחק המבוסס על פתרון חידות והתקדמות לקראת יציאה
+ * מתאים למשחקים עם חידות ופאזלים, עם שילוב סיפורי ותחושת דחיפות
  */
 export const escapeRoomTemplate = {
   id: "escape_room",
   name: "חדר בריחה",
   description: "תבנית משחק המדמה חדר בריחה עם חידות שיש לפתור",
   structure: {
-    intro: { required: true, type: "scenario_intro" },
+    intro: { 
+      required: true, 
+      type: "scenario_intro" 
+    },
     puzzles: {
       required: true,
       minCount: 3,
@@ -17,8 +20,14 @@ export const escapeRoomTemplate = {
         "fill_in_blanks", "code_breaking", "lock_puzzle"
       ]
     },
-    final_challenge: { required: true, type: "final_puzzle" },
-    outro: { required: true, type: "victory" }
+    final_challenge: { 
+      required: true, 
+      type: "final_puzzle" 
+    },
+    outro: { 
+      required: true, 
+      type: "victory" 
+    }
   },
   progression: {
     type: "semi_linear", // מאפשר לפתור חלק מהחידות במקביל
@@ -49,3 +58,42 @@ export const escapeRoomTemplate = {
     ambientSounds: true
   }
 };
+
+/**
+ * פונקציה ליצירת תבנית חדר בריחה מותאם אישית
+ * @param {Object} options אפשרויות להתאמה
+ * @returns {Object} תבנית חדר בריחה מותאם
+ */
+export function createEscapeRoom(options = {}) {
+  return {
+    ...escapeRoomTemplate,
+    ...options,
+    // מיזוג הגדרות ברמה עמוקה יותר
+    structure: {
+      ...escapeRoomTemplate.structure,
+      ...options.structure
+    },
+    progression: {
+      ...escapeRoomTemplate.progression,
+      ...options.progression
+    },
+    scoring: {
+      ...escapeRoomTemplate.scoring,
+      ...options.scoring
+    },
+    difficulty: {
+      ...escapeRoomTemplate.difficulty,
+      ...options.difficulty
+    },
+    storytelling: {
+      ...escapeRoomTemplate.storytelling,
+      ...options.storytelling
+    },
+    defaultSettings: {
+      ...escapeRoomTemplate.defaultSettings,
+      ...options.defaultSettings
+    }
+  };
+}
+
+export default escapeRoomTemplate;
