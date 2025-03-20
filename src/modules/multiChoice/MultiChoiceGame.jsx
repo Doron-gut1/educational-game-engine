@@ -4,6 +4,10 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
+import { useHints } from '../../hooks/useHints';  // הוק חדש
+import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש
+import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש
+import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש
 
 /**
  * משחק שאלות רב-ברירה
@@ -12,12 +16,16 @@ import { useScoring } from '../../hooks/useScoring';
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
  * @param {string} props.title - כותרת המשחק
  * @param {number} props.basePoints - נקודות בסיס לתשובה נכונה
+ * @param {Object} props.sourceReference - מקור ורפרנס לשאלות
+ * @param {Object} props.learningPopup - מידע לחלון סיכום הלמידה
  */
 export function MultiChoiceGame({ 
   questions = [], 
   onComplete, 
   title = 'שאלות רב-ברירה',
-  basePoints = 10
+  basePoints = 10,
+  sourceReference = null,
+  learningPopup = null
 }) {
   const { state } = useGameContext();
   const { addScore } = useScoring();
@@ -29,15 +37,27 @@ export function MultiChoiceGame({
   const [totalScore, setTotalScore] = useState(0);
   const [answeredQuestions, setAnsweredQuestions] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [showLearningPopup, setShowLearningPopup] = useState(false);
   
   const currentQuestion = questions[currentQuestionIndex] || null;
   
-  // פילטר אופציות לפי רמת קושי
+  // שימוש בהוק רמזים
+  const { 
+    canRevealHint, 
+    revealNextHint, 
+    getRevealedHints,
+    hintsUsed,
+    maxHints,
+    resetHints
+  } = useHints(currentQuestion?.hints || []);
+  
+  // איפוס בעת שינוי שאלה
   useEffect(() => {
     setSelectedOption(null);
     setIsAnswered(false);
     setIsCorrect(false);
-  }, [currentQuestionIndex]);
+    resetHints();
+  }, [currentQuestionIndex, resetHints]);
   
   // פילטור אופציות לפי רמת קושי
   const getFilteredOptions = () => {
@@ -93,8 +113,22 @@ export function MultiChoiceGame({
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      setShowSummary(true);
+      // אם הוגדר חלון למידה, יש להציג אותו לפני הסיום
+      if (learningPopup) {
+        setShowLearningPopup(true);
+      } else {
+        setShowSummary(true);
+      }
     }
+  };
+  
+  const handleRequestHint = () => {
+    revealNextHint();
+  };
+  
+  const handleCloseLearningPopup = () => {
+    setShowLearningPopup(false);
+    setShowSummary(true);
   };
   
   const handleComplete = () => {
@@ -132,6 +166,17 @@ export function MultiChoiceGame({
         color="primary" 
       />
       
+      {/* מקור ורפרנס */}
+      {(sourceReference || currentQuestion.sourceReference) && (
+        <SourceReference 
+          source={currentQuestion.sourceReference?.source || sourceReference?.source}
+          reference={currentQuestion.sourceReference?.reference || sourceReference?.reference}
+          expandable={true}
+          initiallyExpanded={false}
+          className="mb-4"
+        />
+      )}
+      
       <QuestionCard
         question={currentQuestion}
         options={getFilteredOptions()}
@@ -141,12 +186,36 @@ export function MultiChoiceGame({
         onOptionSelect={handleOptionSelect}
       />
       
+      {/* פאנל רמזים */}
+      <HintsPanel 
+        hints={currentQuestion.hints || []}
+        revealedHints={getRevealedHints()}
+        canRevealMore={canRevealHint()}
+        onRequestHint={handleRequestHint}
+        hintsUsed={hintsUsed}
+        maxHints={maxHints}
+      />
+      
       {isAnswered && (
         <div className="flex justify-end mt-4">
           <Button onClick={handleNextQuestion}>
             {currentQuestionIndex < questions.length - 1 ? 'השאלה הבאה' : 'סיים'}
           </Button>
         </div>
+      )}
+      
+      {/* חלון סיכום למידה */}
+      {learningPopup && (
+        <LearningPopup
+          isOpen={showLearningPopup}
+          onClose={handleCloseLearningPopup}
+          onContinue={handleCloseLearningPopup}
+          title={learningPopup.title || "מה למדנו?"}
+          keyPoints={learningPopup.keyPoints || []}
+          mainValue={learningPopup.mainValue || ""}
+          thinkingPoints={learningPopup.thinkingPoints || []}
+          familyActivity={learningPopup.familyActivity || ""}
+        />
       )}
     </div>
   );
