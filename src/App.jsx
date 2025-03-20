@@ -2,28 +2,30 @@
 import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { defaultTheme } from './themes/defaultTheme';
+import { LoggerService } from './services';
+import { DevTools } from './components/dev/DevTools';
 import './App.css';
 
 // Import game components
 import PassoverQuestGame from './games/passover/PassoverQuestGame.jsx';
 
 function App() {
-  console.log("App component initialized");
+  LoggerService.debug("App component initialized");
   
   const [selectedGame, setSelectedGame] = useState(null);
 
   // Debug effect to track initial render and state changes
   useEffect(() => {
-    console.log("App mounted/updated. Selected game:", selectedGame);
+    LoggerService.debug("App mounted/updated. Selected game:", selectedGame);
   }, [selectedGame]);
 
   const handleGameSelect = (gameId) => {
-    console.log("Game selected:", gameId);
+    LoggerService.info("Game selected:", gameId);
     setSelectedGame(gameId);
   };
 
   const renderGameSelector = () => {
-    console.log("Rendering game selector");
+    LoggerService.debug("Rendering game selector");
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center p-4" dir="rtl">
         <div className="max-w-4xl w-full bg-white rounded-lg shadow-xl p-8">
@@ -60,15 +62,15 @@ function App() {
   };
 
   const renderSelectedGame = () => {
-    console.log("Rendering selected game:", selectedGame);
+    LoggerService.debug("Rendering selected game:", selectedGame);
     
     switch (selectedGame) {
       case 'passover':
-        console.log("Attempting to render PassoverQuestGame");
+        LoggerService.debug("Attempting to render PassoverQuestGame");
         try {
           return <PassoverQuestGame />;
         } catch (error) {
-          console.error("Error rendering PassoverQuestGame:", error);
+          LoggerService.error("Error rendering PassoverQuestGame:", error);
           return (
             <div className="min-h-screen bg-red-50 flex items-center justify-center p-4" dir="rtl">
               <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg">
@@ -108,11 +110,12 @@ function App() {
     }
   };
 
-  console.log("App render");
+  LoggerService.debug("App render");
   return (
     <ThemeProvider initialTheme={defaultTheme}>
       <div className="app">
         {renderSelectedGame()}
+        <DevTools />
       </div>
     </ThemeProvider>
   );
