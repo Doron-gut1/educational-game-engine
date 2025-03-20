@@ -1,3 +1,4 @@
+// src/modules/dragAndDrop/DragDropGame.jsx
 import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -6,6 +7,10 @@ import { DropZone } from './DropZone';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import { useScoring } from '../../hooks/useScoring';
+import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
+import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש - src/components/ui/HintsPanel.jsx
+import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש - src/components/ui/SourceReference.jsx
+import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש - src/components/ui/LearningPopup.jsx
 
 /**
  * משחק גרירה והשלכה
@@ -15,14 +20,21 @@ import { useScoring } from '../../hooks/useScoring';
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
  * @param {string} props.title - כותרת המשחק
  * @param {number} props.basePoints - נקודות בסיס להתאמה נכונה
+ * @param {Array} props.hints - רמזים למשחק
+ * @param {Object} props.sourceReference - מקור ורפרנס לשאלות
+ * @param {Object} props.learningPopup - מידע לחלון סיכום הלמידה
  */
 export function DragDropGame({
   items = [],
   dropZones = [],
   onComplete,
   title = 'גרור ושדך',
+  description = '',
   basePoints = 10,
-  showFeedbackImmediately = true
+  showFeedbackImmediately = true,
+  hints = [],
+  sourceReference = null,
+  learningPopup = null
 }) {
   const { addScore } = useScoring();
   
@@ -31,6 +43,16 @@ export function DragDropGame({
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
+  const [showLearningPopup, setShowLearningPopup] = useState(false);
+  
+  // שימוש בהוק רמזים
+  const { 
+    canRevealHint, 
+    revealNextHint, 
+    getRevealedHints,
+    hintsUsed,
+    maxHints
+  } = useHints(hints);
   
   // סופר פריטים שהושלכו
   const countDroppedItems = Object.keys(droppedItems).length;
@@ -92,6 +114,11 @@ export function DragDropGame({
     }
   };
   
+  // בקשת רמז
+  const handleRequestHint = () => {
+    revealNextHint();
+  };
+  
   // בדיקת תוצאות
   const checkResults = () => {
     let correctCount = 0;
@@ -112,11 +139,24 @@ export function DragDropGame({
     setScore(totalPoints);
     setShowResults(true);
     
-    // אם הכל נכון, סיום המשחק
-    if (correctCount === items.length && onComplete) {
-      setTimeout(() => {
-        onComplete(totalPoints);
-      }, 2000);
+    // אם הכל נכון וקיים חלון למידה, יש להציג אותו לפני הסיום
+    if (correctCount === items.length) {
+      if (learningPopup) {
+        setShowLearningPopup(true);
+      } else if (onComplete) {
+        // אחרת, מסיימים ישירות
+        setTimeout(() => {
+          onComplete(totalPoints);
+        }, 2000);
+      }
+    }
+  };
+
+  // טיפול בסגירת חלון הלמידה
+  const handleCloseLearningPopup = () => {
+    setShowLearningPopup(false);
+    if (onComplete) {
+      onComplete(score);
     }
   };
   
@@ -150,7 +190,13 @@ export function DragDropGame({
         <p className="text-xl mb-4">צברת {score} נקודות</p>
         <p className="text-lg mb-6">השלכת נכון {correctCount} מתוך {items.length} פריטים</p>
         
-        <Button onClick={() => onComplete(score)} size="large">סיים</Button>
+        <Button onClick={() => {
+          if (learningPopup) {
+            setShowLearningPopup(true);
+          } else if (onComplete) {
+            onComplete(score);
+          }
+        }} size="large">סיים</Button>
       </div>
     );
   }
@@ -165,11 +211,26 @@ export function DragDropGame({
           </div>
         </div>
         
+        {description && (
+          <p className="text-gray-600">{description}</p>
+        )}
+        
         <ProgressBar 
           value={countDroppedItems} 
           max={items.length} 
           color="primary" 
         />
+        
+        {/* מקור ורפרנס */}
+        {sourceReference && (
+          <SourceReference 
+            source={sourceReference.source}
+            reference={sourceReference.reference}
+            expandable={true}
+            initiallyExpanded={false}
+            className="mb-4"
+          />
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* אזורי השלכה */}
@@ -214,6 +275,16 @@ export function DragDropGame({
           </div>
         </div>
         
+        {/* פאנל רמזים */}
+        <HintsPanel 
+          hints={hints}
+          revealedHints={getRevealedHints()}
+          canRevealMore={canRevealHint()}
+          onRequestHint={handleRequestHint}
+          hintsUsed={hintsUsed}
+          maxHints={maxHints}
+        />
+        
         {/* כפתור בדיקה */}
         {!showFeedbackImmediately && allItemsDropped && (
           <div className="flex justify-center mt-4">
@@ -226,6 +297,20 @@ export function DragDropGame({
           <div className="flex justify-center mt-4">
             <Button onClick={checkResults} size="large">הצג תוצאות</Button>
           </div>
+        )}
+        
+        {/* חלון סיכום למידה */}
+        {learningPopup && (
+          <LearningPopup
+            isOpen={showLearningPopup}
+            onClose={handleCloseLearningPopup}
+            onContinue={handleCloseLearningPopup}
+            title={learningPopup.title || "מה למדנו?"}
+            keyPoints={learningPopup.keyPoints || []}
+            mainValue={learningPopup.mainValue || ""}
+            thinkingPoints={learningPopup.thinkingPoints || []}
+            familyActivity={learningPopup.familyActivity || ""}
+          />
         )}
       </div>
     </DndProvider>
