@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { GameContainer } from '../../components/layout/GameContainer';
 import { GameManager } from '../../components/GameManager';
 import { NavigationBar } from '../../components/layout/NavigationBar';
+import { LoggerService } from '../../services';
+import { DevTools } from '../../components/dev/DevTools';
 import passoverQuestConfig from './config';
 import passoverCharacters from './characters';
 import passoverTheme from '../../themes/passoverTheme';
@@ -10,48 +12,48 @@ import passoverTheme from '../../themes/passoverTheme';
  * דף ראשי למשחק פסח - המסע לחירות
  */
 export default function PassoverQuestGame() {
-  console.log("PassoverQuestGame component initialized");
-  console.log("Config:", passoverQuestConfig);
-  console.log("Characters:", passoverCharacters);
-  console.log("Theme:", passoverTheme);
+  LoggerService.debug("PassoverQuestGame component initialized");
+  LoggerService.debug("Config:", passoverQuestConfig);
+  LoggerService.debug("Characters:", passoverCharacters);
+  LoggerService.debug("Theme:", passoverTheme);
   
   const [gameKey, setGameKey] = useState(Date.now()); // מפתח לאיפוס המשחק
   
   // Debug effect to track mount and render
   useEffect(() => {
-    console.log("PassoverQuestGame mounted/updated");
+    LoggerService.debug("PassoverQuestGame mounted/updated");
     
     // Check all required objects and properties
     if (!passoverQuestConfig) {
-      console.error("passoverQuestConfig is missing");
+      LoggerService.error("passoverQuestConfig is missing");
     }
     
     if (!passoverQuestConfig.template) {
-      console.error("passoverQuestConfig.template is missing");
+      LoggerService.error("passoverQuestConfig.template is missing");
     }
     
     if (!passoverCharacters) {
-      console.error("passoverCharacters is missing");
+      LoggerService.error("passoverCharacters is missing");
     }
     
     if (!passoverTheme) {
-      console.error("passoverTheme is missing");
+      LoggerService.error("passoverTheme is missing");
     }
   }, []);
   
   // איפוס המשחק
   const handleReset = () => {
-    console.log("Game reset requested");
+    LoggerService.info("Game reset requested");
     setGameKey(Date.now());
   };
   
   // סיום המשחק
   const handleComplete = (score) => {
-    console.log("המשחק הסתיים, הניקוד הסופי:", score);
+    LoggerService.info("המשחק הסתיים, הניקוד הסופי:", score);
     // כאן ניתן להוסיף פעולות נוספות בסיום המשחק
   };
   
-  console.log("PassoverQuestGame render");
+  LoggerService.debug("PassoverQuestGame render");
   try {
     return (
       <GameContainer 
@@ -77,10 +79,13 @@ export default function PassoverQuestGame() {
         <footer className="p-4 text-center text-gray-500 text-sm">
           &copy; המסע לחירות - משחק פסח אינטראקטיבי
         </footer>
+        
+        {/* הוספת DevTools למשחק */}
+        <DevTools />
       </GameContainer>
     );
   } catch (error) {
-    console.error("Error rendering PassoverQuestGame:", error);
+    LoggerService.error("Error rendering PassoverQuestGame:", error);
     return (
       <div className="min-h-screen bg-red-50 flex items-center justify-center p-4" dir="rtl">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg">
