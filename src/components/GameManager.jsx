@@ -8,6 +8,10 @@ import { TemplateManager } from '../core/engine/TemplateManager';
 // מודולי משחק
 import { MultiChoiceGame } from '../modules/multiChoice/MultiChoiceGame';
 import { DragDropGame } from '../modules/dragAndDrop/DragDropGame';
+import { MatchingGame } from '../modules/matching/MatchingGame';
+import { FillInBlanksGame } from '../modules/fillInBlanks/FillInBlanksGame';
+import { WordSearchGame } from '../modules/wordSearch/WordSearchGame';
+import { SortingGame } from '../modules/sorting/SortingGame';
 
 /**
  * מנהל המשחק - רכיב האחראי על תזמון שלבי המשחק והתקדמות
@@ -263,7 +267,67 @@ function renderStageContent(stageData, onComplete) {
         />
       );
     
-    // יש להוסיף כאן טיפול בסוגי משחק נוספים...
+    case 'matching':
+      return (
+        <MatchingGame 
+          pairs={stageData.pairs || []}
+          title={stageData.title}
+          instructions={stageData.description}
+          shuffleItems={stageData.shuffleItems !== false}
+          onComplete={onComplete}
+        />
+      );
+      
+    case 'fill_in_blanks':
+      return (
+        <FillInBlanksGame 
+          text={stageData.text || ""}
+          blanks={stageData.blanks || {}}
+          wordBank={stageData.wordBank || []}
+          showWordBank={stageData.showWordBank !== false}
+          title={stageData.title}
+          onComplete={onComplete}
+        />
+      );
+      
+    case 'word_search':
+      return (
+        <WordSearchGame 
+          grid={stageData.grid || []}
+          words={stageData.words || []}
+          title={stageData.title}
+          timeLimit={stageData.timeLimit || 0}
+          onComplete={onComplete}
+        />
+      );
+      
+    case 'sorting':
+      return (
+        <SortingGame 
+          items={stageData.items || []}
+          sortType={stageData.sortType || "chronological"}
+          title={stageData.title}
+          onComplete={onComplete}
+        />
+      );
+      
+    case 'multi_stage':
+      // מטפל בשלבים מורכבים המכילים מספר אתגרים
+      if (stageData.challenges && stageData.challenges.length > 0) {
+        const firstChallenge = stageData.challenges[0];
+        return renderStageContent(firstChallenge, onComplete);
+      }
+      return (
+        <div className="text-center p-6 bg-amber-50 rounded-lg">
+          <p>שלב מרובה אתגרים אך לא הוגדרו אתגרים</p>
+          <Button 
+            onClick={() => onComplete(0)} 
+            className="mt-4"
+          >
+            המשך לשלב הבא
+          </Button>
+        </div>
+      );
     
     default:
       return (
