@@ -1,3 +1,4 @@
+// src/modules/wordSearch/WordSearchGame.jsx
 import React, { useState, useEffect } from 'react';
 import { WordGrid } from './WordGrid';
 import { WordList } from './WordList';
@@ -6,6 +7,10 @@ import { Button } from '../../components/ui/Button';
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useTimer } from '../../hooks/useTimer';
+import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
+import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש - src/components/ui/HintsPanel.jsx
+import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש - src/components/ui/SourceReference.jsx
+import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש - src/components/ui/LearningPopup.jsx
 
 /**
  * משחק חיפוש מילים
@@ -14,12 +19,18 @@ import { useTimer } from '../../hooks/useTimer';
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
  * @param {string} props.title - כותרת המשחק
  * @param {number} props.basePoints - נקודות בסיס לכל מילה שנמצאה
+ * @param {Array} props.hints - רמזים למשחק
+ * @param {Object} props.sourceReference - מקור ורפרנס לשאלות
+ * @param {Object} props.learningPopup - מידע לחלון סיכום הלמידה
  */
 export function WordSearchGame({
   puzzles = [],
   onComplete,
   title = 'חיפוש מילים',
-  basePoints = 10
+  basePoints = 10,
+  hints = [],
+  sourceReference = null,
+  learningPopup = null
 }) {
   const { state } = useGameContext();
   const { addScore } = useScoring();
@@ -32,9 +43,19 @@ export function WordSearchGame({
   const [isComplete, setIsComplete] = useState(false);
   const [totalScore, setTotalScore] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [showLearningPopup, setShowLearningPopup] = useState(false);
   
   // התצרף הנוכחי
   const currentPuzzle = puzzles[currentPuzzleIndex] || null;
+  
+  // שימוש בהוק רמזים
+  const { 
+    canRevealHint, 
+    revealNextHint, 
+    getRevealedHints,
+    hintsUsed,
+    maxHints
+  } = useHints(currentPuzzle?.hints || hints);
   
   // טיימר למשחק (אם מוגדר)
   const hasTimeLimit = currentPuzzle?.timeLimit > 0;
@@ -55,6 +76,11 @@ export function WordSearchGame({
     
     initializePuzzle(currentPuzzle);
   }, [currentPuzzleIndex, currentPuzzle]);
+  
+  // בקשת רמז
+  const handleRequestHint = () => {
+    revealNextHint();
+  };
   
   // אתחול תצרף
   const initializePuzzle = (puzzle) => {
@@ -105,6 +131,14 @@ export function WordSearchGame({
     }
     
     return puzzle;
+  };
+  
+  // טיפול בסגירת חלון הלמידה
+  const handleCloseLearningPopup = () => {
+    setShowLearningPopup(false);
+    if (onComplete) {
+      onComplete(totalScore);
+    }
   };
   
   // פונקציה לייצור רשת אוטומטית לחיפוש מילים
@@ -257,7 +291,12 @@ export function WordSearchGame({
     if (currentPuzzleIndex < puzzles.length - 1) {
       setCurrentPuzzleIndex(prev => prev + 1);
     } else {
-      setShowSummary(true);
+      // אם הוגדר חלון למידה, יש להציג אותו לפני הסיום
+      if (learningPopup) {
+        setShowLearningPopup(true);
+      } else {
+        setShowSummary(true);
+      }
     }
   };
   
@@ -330,6 +369,17 @@ export function WordSearchGame({
         <p className="text-gray-700 mb-4">{currentPuzzle.description}</p>
       )}
       
+      {/* מקור ורפרנס */}
+      {(sourceReference || currentPuzzle.sourceReference) && (
+        <SourceReference 
+          source={currentPuzzle.sourceReference?.source || sourceReference?.source}
+          reference={currentPuzzle.sourceReference?.reference || sourceReference?.reference}
+          expandable={true}
+          initiallyExpanded={false}
+          className="mb-4"
+        />
+      )}
+      
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* רשת חיפוש המילים */}
@@ -353,6 +403,18 @@ export function WordSearchGame({
           </div>
         </div>
         
+        {/* פאנל רמזים */}
+        <div className="mt-6">
+          <HintsPanel 
+            hints={currentPuzzle.hints || hints}
+            revealedHints={getRevealedHints()}
+            canRevealMore={canRevealHint()}
+            onRequestHint={handleRequestHint}
+            hintsUsed={hintsUsed}
+            maxHints={maxHints}
+          />
+        </div>
+        
         {/* כפתור למעבר לתצרף הבא */}
         {isComplete && (
           <div className="flex justify-end mt-6">
@@ -362,6 +424,20 @@ export function WordSearchGame({
           </div>
         )}
       </div>
+      
+      {/* חלון סיכום למידה */}
+      {learningPopup && (
+        <LearningPopup
+          isOpen={showLearningPopup}
+          onClose={handleCloseLearningPopup}
+          onContinue={handleCloseLearningPopup}
+          title={learningPopup.title || "מה למדנו?"}
+          keyPoints={learningPopup.keyPoints || []}
+          mainValue={learningPopup.mainValue || ""}
+          thinkingPoints={learningPopup.thinkingPoints || []}
+          familyActivity={learningPopup.familyActivity || ""}
+        />
+      )}
     </div>
   );
 }
