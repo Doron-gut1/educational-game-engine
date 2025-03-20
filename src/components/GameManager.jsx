@@ -31,12 +31,13 @@ export function GameManager({
   const [isIntro, setIsIntro] = useState(true);
   const [isOutro, setIsOutro] = useState(false);
   const [currentStageData, setCurrentStageData] = useState(null);
+  const [templateManager] = useState(() => new TemplateManager());
 
   // טעינת תבנית המשחק
   useEffect(() => {
     async function loadTemplate() {
       try {
-        const loadedTemplate = await TemplateManager.loadTemplate(templateId);
+        const loadedTemplate = await templateManager.loadTemplate(templateId);
         setTemplate(loadedTemplate);
       } catch (error) {
         console.error("Failed to load template:", error);
@@ -44,7 +45,7 @@ export function GameManager({
     }
 
     loadTemplate();
-  }, [templateId]);
+  }, [templateId, templateManager]);
 
   // עדכון שלב נוכחי כאשר משתנה
   useEffect(() => {
