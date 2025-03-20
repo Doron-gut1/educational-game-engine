@@ -2,13 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Heebo', sans-serif;
-  margin: 0;
-  padding: 0;
+@layer base {
+  body {
+    font-family: 'Heebo', sans-serif;
+    direction: rtl;
+    margin: 0;
+    padding: 0;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
 }
 
-/* אנימציות בסיסיות */
+@layer components {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.5s ease-out;
+  }
+
+  .animate-pulse-once {
+    animation: pulse 1s ease-in-out;
+  }
+
+  .cursor-disabled {
+    cursor: not-allowed;
+  }
+}
+
+/* אנימציות ספציפיות */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -19,11 +44,17 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* קלאסים לאנימציה */
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-out;
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
-.animate-slide-in {
-  animation: slideIn 0.5s ease-out;
+/* לכידות לנגישות וקריאות */
+.rtl {
+  direction: rtl;
+}
+
+.ltr {
+  direction: ltr;
 }
