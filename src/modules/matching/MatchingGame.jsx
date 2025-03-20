@@ -1,8 +1,13 @@
+// src/modules/matching/MatchingGame.jsx
 import React, { useState, useEffect } from 'react';
 import { MatchCard } from './MatchCard';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import { useScoring } from '../../hooks/useScoring';
+import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
+import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש - src/components/ui/HintsPanel.jsx
+import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש - src/components/ui/SourceReference.jsx
+import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש - src/components/ui/LearningPopup.jsx
 
 /**
  * משחק התאמה בין פריטים
@@ -13,6 +18,9 @@ import { useScoring } from '../../hooks/useScoring';
  * @param {string} props.instructions - הוראות המשחק
  * @param {boolean} props.shuffleItems - האם לערבב את הפריטים
  * @param {number} props.basePoints - נקודות בסיס למציאת זוג
+ * @param {Array} props.hints - רמזים למשחק
+ * @param {Object} props.sourceReference - מקור ורפרנס לשאלות
+ * @param {Object} props.learningPopup - מידע לחלון סיכום הלמידה
  */
 export function MatchingGame({
   pairs = [],
@@ -20,7 +28,10 @@ export function MatchingGame({
   title = 'משחק התאמה',
   instructions = 'חברו בין הפריטים המתאימים',
   shuffleItems = true,
-  basePoints = 10
+  basePoints = 10,
+  hints = [],
+  sourceReference = null,
+  learningPopup = null
 }) {
   const { addScore } = useScoring();
   
@@ -34,6 +45,16 @@ export function MatchingGame({
   const [matchedPairs, setMatchedPairs] = useState([]);
   const [score, setScore] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [showLearningPopup, setShowLearningPopup] = useState(false);
+  
+  // שימוש בהוק רמזים
+  const { 
+    canRevealHint, 
+    revealNextHint, 
+    getRevealedHints,
+    hintsUsed,
+    maxHints
+  } = useHints(hints);
   
   // פיצול הזוגות לשתי רשימות נפרדות
   useEffect(() => {
@@ -58,6 +79,11 @@ export function MatchingGame({
       setItems2(right);
     }
   }, [pairs, shuffleItems]);
+  
+  // בקשת רמז
+  const handleRequestHint = () => {
+    revealNextHint();
+  };
   
   // בחירת פריט מהצד השמאלי
   const handleSelectItem1 = (itemId) => {
@@ -89,6 +115,14 @@ export function MatchingGame({
     }
   };
   
+  // טיפול בסגירת חלון הלמידה
+  const handleCloseLearningPopup = () => {
+    setShowLearningPopup(false);
+    if (onComplete) {
+      onComplete(score);
+    }
+  };
+  
   // בדיקת התאמה בין שני פריטים שנבחרו
   const checkMatch = (id1, id2) => {
     const item1 = items1.find(item => item.id === id1);
@@ -111,7 +145,13 @@ export function MatchingGame({
       // בדיקה אם המשחק הסתיים
       if (matchedPairs.length + 1 === pairs.length) {
         setIsComplete(true);
-        if (onComplete) {
+        
+        // אם הוגדר חלון למידה, יש להציג אותו לפני הסיום
+        if (learningPopup) {
+          setTimeout(() => {
+            setShowLearningPopup(true);
+          }, 1000);
+        } else if (onComplete) {
           setTimeout(() => {
             onComplete(score + points);
           }, 1500);
@@ -129,6 +169,15 @@ export function MatchingGame({
   // בדיקה אם פריט מסוים מותאם
   const isPairMatched = (pairId) => {
     return matchedPairs.includes(pairId);
+  };
+  
+  // סיום המשחק
+  const handleComplete = () => {
+    if (learningPopup) {
+      setShowLearningPopup(true);
+    } else if (onComplete) {
+      onComplete(score);
+    }
   };
   
   return (
@@ -149,6 +198,17 @@ export function MatchingGame({
         max={pairs.length} 
         color="primary" 
       />
+      
+      {/* מקור ורפרנס */}
+      {sourceReference && (
+        <SourceReference 
+          source={sourceReference.source}
+          reference={sourceReference.reference}
+          expandable={true}
+          initiallyExpanded={false}
+          className="mb-4"
+        />
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* טור שמאלי */}
@@ -180,11 +240,39 @@ export function MatchingGame({
         </div>
       </div>
       
+      {/* פאנל רמזים */}
+      <HintsPanel 
+        hints={hints}
+        revealedHints={getRevealedHints()}
+        canRevealMore={canRevealHint()}
+        onRequestHint={handleRequestHint}
+        hintsUsed={hintsUsed}
+        maxHints={maxHints}
+      />
+      
       {isComplete && (
         <div className="text-center p-4 bg-green-50 rounded-lg">
           <h3 className="text-xl font-bold text-green-800 mb-2">כל הכבוד! סיימת את המשחק.</h3>
-          <p>צברת {score} נקודות</p>
+          <p className="mb-4">צברת {score} נקודות</p>
+          
+          {!showLearningPopup && (
+            <Button onClick={handleComplete} size="medium">סיים</Button>
+          )}
         </div>
+      )}
+      
+      {/* חלון סיכום למידה */}
+      {learningPopup && (
+        <LearningPopup
+          isOpen={showLearningPopup}
+          onClose={handleCloseLearningPopup}
+          onContinue={handleCloseLearningPopup}
+          title={learningPopup.title || "מה למדנו?"}
+          keyPoints={learningPopup.keyPoints || []}
+          mainValue={learningPopup.mainValue || ""}
+          thinkingPoints={learningPopup.thinkingPoints || []}
+          familyActivity={learningPopup.familyActivity || ""}
+        />
       )}
     </div>
   );
