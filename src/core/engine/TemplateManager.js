@@ -6,6 +6,27 @@ export class TemplateManager {
   constructor() {
     this.templates = {};
     this.loadedTemplates = [];
+    
+    // מיפוי של מזהי תבניות לשמות קבצים
+    this.templateFileMapping = {
+      'quest_journey': 'questJourney',
+      // ניתן להוסיף כאן מיפויים נוספים בעתיד אם יהיו אי התאמות נוספות
+    };
+  }
+
+  /**
+   * מתרגם מזהה תבנית לשם קובץ
+   * @param {string} templateId - מזהה התבנית
+   * @returns {string} - שם הקובץ התואם
+   */
+  getTemplateFileName(templateId) {
+    // אם יש מיפוי מפורש, השתמש בו
+    if (this.templateFileMapping[templateId]) {
+      return this.templateFileMapping[templateId];
+    }
+    
+    // אחרת, השתמש במזהה כמו שהוא
+    return templateId;
   }
 
   /**
@@ -20,7 +41,11 @@ export class TemplateManager {
     }
 
     try {
-      const module = await import(`../../templates/${templateId}.js`);
+      // המרת מזהה התבנית לשם קובץ מתאים
+      const templateFileName = this.getTemplateFileName(templateId);
+      
+      // טעינת הקובץ
+      const module = await import(`../../templates/${templateFileName}.js`);
       const template = module.default || module;
       
       this.templates[templateId] = template;
