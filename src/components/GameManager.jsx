@@ -4,6 +4,8 @@ import { useGameProgress } from '../hooks/useGameProgress';
 import { Button } from './ui/Button';
 import { ProgressBar } from './ui/ProgressBar';
 import { TemplateManager } from '../core/engine/TemplateManager';
+import { IntroCard } from './layout/IntroCard';
+import { Card } from './ui/Card';
 
 // מודולי משחק
 import { MultiChoiceGame } from '../modules/multiChoice/MultiChoiceGame';
@@ -142,7 +144,7 @@ export function GameManager({
   // אם יש שגיאה, מציגים אותה
   if (error) {
     return (
-      <div className="p-6 bg-red-50 rounded-lg shadow-lg text-center">
+      <Card variant="primary" className="p-6 text-center">
         <div className="text-red-500 text-xl font-bold mb-4">שגיאה</div>
         <p className="mb-4">{error}</p>
         {onReset && (
@@ -154,7 +156,7 @@ export function GameManager({
             נסה שוב
           </Button>
         )}
-      </div>
+      </Card>
     );
   }
 
@@ -174,48 +176,17 @@ export function GameManager({
     );
   }
 
-  // הצגת מסך מבוא
+  // הצגת מסך מבוא משופר
   if (isIntro) {
     const introData = gameConfig.content.intro;
     
-    if (!introData) {
-      return (
-        <div className="p-6 bg-yellow-50 rounded-lg shadow-lg text-center">
-          <p className="mb-4">נתוני שלב המבוא חסרים</p>
-          <Button onClick={() => handleStageComplete(0)}>
-            המשך למשחק
-          </Button>
-        </div>
-      );
-    }
-    
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-center mb-6">{introData.title}</h1>
-        {introData.dialogue && (
-          <div className="mb-8 space-y-4">
-            {introData.dialogue.map((line, index) => (
-              <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-lg">
-                  {line.character && (
-                    <span className="font-bold mr-2">{line.character}:</span>
-                  )}
-                  {line.text}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="text-center">
-          <Button 
-            onClick={() => handleStageComplete(0)} 
-            size="large"
-            disabled={stageMoveFlag}
-          >
-            {introData.actionButton?.text || 'התחל במשחק'}
-          </Button>
-        </div>
-      </div>
+      <IntroCard 
+        introData={introData}
+        onStart={() => handleStageComplete(0)}
+        characters={gameConfig.characters}
+        isLoading={stageMoveFlag}
+      />
     );
   }
 
@@ -225,17 +196,17 @@ export function GameManager({
     
     if (!outroData) {
       return (
-        <div className="p-6 bg-yellow-50 rounded-lg shadow-lg text-center">
+        <Card variant="primary" className="p-6 text-center">
           <p className="mb-4">נתוני שלב הסיום חסרים</p>
           <Button onClick={() => handleStageComplete(0)}>
             סיים את המשחק
           </Button>
-        </div>
+        </Card>
       );
     }
     
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+      <Card className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
         <h1 className="text-3xl font-bold text-center mb-6">{outroData.title}</h1>
         {outroData.dialogue && (
           <div className="mb-8 space-y-4">
@@ -284,14 +255,14 @@ export function GameManager({
             </Button>
           )}
         </div>
-      </div>
+      </Card>
     );
   }
 
   // הצגת שלב נוכחי
   if (!currentStageData) {
     return (
-      <div className="text-center p-6 bg-red-50 rounded-lg shadow-lg">
+      <Card variant="primary" className="text-center p-6">
         <p className="text-red-500 font-bold mb-4">שלב לא נמצא</p>
         <p className="text-gray-700 mb-4">לא נמצאו נתונים לשלב הנוכחי: {currentStage}</p>
         {onReset && (
@@ -302,7 +273,7 @@ export function GameManager({
             התחל מחדש
           </Button>
         )}
-      </div>
+      </Card>
     );
   }
 
@@ -344,9 +315,9 @@ export function GameManager({
       )}
       
       {/* תוכן השלב לפי סוג */}
-      <div className="bg-white rounded-lg shadow-lg p-4">
+      <Card className="p-4">
         {renderStageContent(currentStageData, handleStageComplete)}
-      </div>
+      </Card>
     </div>
   );
 }
