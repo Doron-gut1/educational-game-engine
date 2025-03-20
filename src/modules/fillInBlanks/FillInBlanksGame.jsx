@@ -1,208 +1,233 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TextWithBlanks } from './TextWithBlanks';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
-import { useGameContext } from '../../contexts/GameContext';
+import { Card } from '../../components/ui/Card';
 import { useScoring } from '../../hooks/useScoring';
+import { useHints } from '../../hooks/useHints';  // הוק חדש
+import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש
+import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש
+import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש
 
 /**
  * משחק השלמת מילים בטקסט
- * @param {Object} props - פרופס הרכיב
- * @param {Array} props.texts - מערך עם טקסטים להשלמה
+ * @param {Object} props - פרופס של הרכיב
+ * @param {string} props.text - הטקסט עם חללים למילוי
+ * @param {Object} props.blanks - מילון של החללים והתשובות הנכונות
+ * @param {Array} props.wordBank - בנק מילים לבחירה
+ * @param {boolean} props.showWordBank - האם להציג את בנק המילים
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
- * @param {string} props.title - כותרת המשחק
- * @param {number} props.basePoints - נקודות בסיס לכל השלמה נכונה
+ * @param {number} props.basePoints - נקודות בסיס להשלמה נכונה
+ * @param {Object} props.sourceReference - מקור ורפרנס לשאלות
+ * @param {Object} props.learningPopup - מידע לחלון סיכום הלמידה
  */
 export function FillInBlanksGame({
-  texts = [],
+  text = '',
+  blanks = {},
+  wordBank = [],
+  showWordBank = true,
+  title = 'השלם את החסר',
+  description = 'השלם את המילים החסרות בטקסט',
   onComplete,
-  title = 'השלמת מילים',
-  basePoints = 10
+  basePoints = 10,
+  hints = [],
+  sourceReference = null,
+  learningPopup = null
 }) {
-  const { state } = useGameContext();
   const { addScore } = useScoring();
+  const [filledValues, setFilledValues] = useState({});
+  const [isChecked, setIsChecked] = useState(false);
+  const [results, setResults] = useState({});
+  const [score, setScore] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+  const [showLearningPopup, setShowLearningPopup] = useState(false);
   
-  // מצב המשחק
-  const [currentTextIndex, setCurrentTextIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState({});
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [totalScore, setTotalScore] = useState(0);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
-  const [totalAnswers, setTotalAnswers] = useState(0);
-  const [showSummary, setShowSummary] = useState(false);
+  // שימוש בהוק רמזים
+  const { 
+    canRevealHint, 
+    revealNextHint, 
+    getRevealedHints,
+    hintsUsed,
+    maxHints
+  } = useHints(hints);
   
-  // הטקסט הנוכחי
-  const currentText = texts[currentTextIndex] || null;
-  
-  // איפוס תשובות בעת מעבר לטקסט חדש
-  useEffect(() => {
-    setUserAnswers({});
-    setIsAnswered(false);
-  }, [currentTextIndex]);
-  
-  // התאמת רמת הקושי
-  const getCurrentTextWithDifficulty = () => {
-    if (!currentText) return null;
+  // עדכון מילה שהושלמה
+  const handleFillBlank = (blankId, value) => {
+    setFilledValues(prev => ({
+      ...prev,
+      [blankId]: value
+    }));
     
-    // בדיקה אם יש הגדרות רמת קושי ספציפיות
-    if (currentText.difficulty && 
-        currentText.difficulty[state.difficulty]) {
-      
-      const difficultyConfig = currentText.difficulty[state.difficulty];
-      
-      // שילוב הגדרות הבסיס עם הגדרות רמת הקושי
-      return {
-        ...currentText,
-        wordBank: difficultyConfig.wordBank || currentText.wordBank,
-        showWordBank: difficultyConfig.showWordBank !== undefined 
-          ? difficultyConfig.showWordBank 
-          : currentText.showWordBank
-      };
+    // אם יש כבר תוצאות, לנקות אותן כי משהו השתנה
+    if (isChecked) {
+      setIsChecked(false);
+      setResults({});
     }
-    
-    return currentText;
   };
   
-  // טיפול בשינוי תשובות
-  const handleBlankChange = (blankId, value, newAnswers) => {
-    setUserAnswers(newAnswers);
-  };
-  
-  // הגשת תשובות לבדיקה
-  const handleSubmit = (answers) => {
-    setUserAnswers(answers);
-    setIsAnswered(true);
-    
-    // בדיקת התשובות ומתן ניקוד
+  // בדיקת תשובות
+  const checkAnswers = () => {
+    const newResults = {};
     let correct = 0;
-    let total = 0;
-    let score = 0;
+    let points = 0;
     
-    const textWithDifficulty = getCurrentTextWithDifficulty();
-    const blanks = textWithDifficulty?.blanks || {};
-    
-    // בדיקת כל תשובה
     Object.entries(blanks).forEach(([blankId, blankInfo]) => {
-      total++;
-      
-      const userAnswer = answers[blankId] || '';
-      const correctAnswer = blankInfo.answer;
+      const userAnswer = filledValues[blankId] || '';
+      const correctAnswer = blankInfo.answer || '';
       const caseSensitive = blankInfo.caseSensitive || false;
+      const acceptAlternatives = blankInfo.acceptAlternatives || [];
       
       let isCorrect = false;
       
-      // בדיקת תשובה מדויקת
+      // בדיקת תשובה נכונה - גם בתוספת עם חלופות
       if (caseSensitive) {
-        isCorrect = userAnswer === correctAnswer;
+        isCorrect = userAnswer === correctAnswer || acceptAlternatives.includes(userAnswer);
       } else {
-        isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+        isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase() ||
+                   acceptAlternatives.some(alt => alt.toLowerCase() === userAnswer.toLowerCase());
       }
       
-      // בדיקת תשובות אלטרנטיביות
-      if (!isCorrect && blankInfo.acceptAlternatives && Array.isArray(blankInfo.acceptAlternatives)) {
-        isCorrect = blankInfo.acceptAlternatives.some(alt => 
-          caseSensitive ? alt === userAnswer : alt.toLowerCase() === userAnswer.toLowerCase()
-        );
-      }
+      newResults[blankId] = isCorrect;
       
       if (isCorrect) {
         correct++;
-        const points = blankInfo.points || basePoints;
-        score += points;
+        points += basePoints;
       }
     });
     
-    // עדכון הניקוד
-    setTotalScore(prevScore => prevScore + score);
-    setCorrectAnswers(prevCorrect => prevCorrect + correct);
-    setTotalAnswers(prevTotal => prevTotal + total);
+    setResults(newResults);
+    setIsChecked(true);
+    setScore(points);
     
-    // הוספת הניקוד למשחק הכללי
-    addScore(score);
+    // אם הכל נכון, מסמן כהושלם
+    const allCorrect = Object.values(newResults).every(result => result === true);
+    if (allCorrect) {
+      setIsComplete(true);
+      addScore(points);
+    }
   };
   
-  // מעבר לטקסט הבא
-  const handleNextText = () => {
-    if (currentTextIndex < texts.length - 1) {
-      setCurrentTextIndex(prevIndex => prevIndex + 1);
-    } else {
-      setShowSummary(true);
-    }
+  // בקשת רמז
+  const handleRequestHint = () => {
+    revealNextHint();
   };
   
   // סיום המשחק
   const handleComplete = () => {
-    if (onComplete) {
-      onComplete(totalScore);
+    // אם הוגדר חלון למידה, יש להציג אותו לפני הסיום
+    if (learningPopup && !showLearningPopup) {
+      setShowLearningPopup(true);
+    } else if (onComplete) {
+      onComplete(score);
     }
   };
   
-  // אם אין טקסטים
-  if (!currentText) {
-    return <div>לא נמצאו טקסטים להשלמה</div>;
-  }
+  // חישוב אחוז השלמה
+  const calculateCompletion = () => {
+    const totalBlanks = Object.keys(blanks).length;
+    const filledBlanks = Object.keys(filledValues).length;
+    return (filledBlanks / totalBlanks) * 100;
+  };
   
-  // הצגת סיכום בסיום המשחק
-  if (showSummary) {
-    const accuracy = totalAnswers > 0 
-      ? Math.round((correctAnswers / totalAnswers) * 100) 
-      : 0;
-      
-    return (
-      <div className="p-6 bg-white rounded-lg shadow-lg text-center">
-        <h2 className="text-2xl font-bold text-green-800 mb-4">סיכום</h2>
-        <p className="text-xl mb-4">צברת {totalScore} נקודות</p>
-        <p className="text-lg mb-2">השלמת נכון {correctAnswers} מתוך {totalAnswers} מילים</p>
-        <p className="text-lg mb-6">דיוק: {accuracy}%</p>
-        
-        <Button onClick={handleComplete} size="large">סיים</Button>
-      </div>
-    );
-  }
-  
-  // רינדור המשחק
-  const textWithDifficulty = getCurrentTextWithDifficulty();
+  // חישוב אחוז הצלחה
+  const calculateSuccessRate = () => {
+    if (!isChecked) return 0;
+    
+    const totalBlanks = Object.keys(blanks).length;
+    const correctBlanks = Object.values(results).filter(res => res === true).length;
+    return (correctBlanks / totalBlanks) * 100;
+  };
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">{title}</h2>
-        <div className="text-sm text-gray-500">
-          טקסט {currentTextIndex + 1} מתוך {texts.length}
-        </div>
+        {isChecked && (
+          <div className="text-sm text-gray-500">
+            {calculateSuccessRate().toFixed(0)}% נכון
+          </div>
+        )}
       </div>
       
-      <ProgressBar 
-        value={currentTextIndex} 
-        max={texts.length - 1} 
-        color="primary" 
-      />
-      
-      {/* תיאור הטקסט (אם יש) */}
-      {textWithDifficulty.description && (
-        <p className="text-gray-700 mb-4">{textWithDifficulty.description}</p>
+      {description && (
+        <p className="text-gray-600">{description}</p>
       )}
       
-      {/* רכיב הטקסט עם חללים להשלמה */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <TextWithBlanks
-          text={textWithDifficulty.text}
-          blanks={textWithDifficulty.blanks}
-          wordBank={textWithDifficulty.wordBank || []}
-          showWordBank={textWithDifficulty.showWordBank !== false}
-          isAnswered={isAnswered}
-          onBlankChange={handleBlankChange}
-          onSubmit={handleSubmit}
+      <ProgressBar 
+        value={calculateCompletion()} 
+        max={100} 
+        color={isChecked ? calculateSuccessRate() === 100 ? "success" : "warning" : "primary"}
+      />
+      
+      {/* מקור ורפרנס */}
+      {sourceReference && (
+        <SourceReference 
+          source={sourceReference.source}
+          reference={sourceReference.reference}
+          expandable={true}
+          initiallyExpanded={false}
+          className="mb-4"
         />
+      )}
+      
+      <Card className="p-6">
+        <TextWithBlanks
+          text={text}
+          blanks={blanks}
+          filledValues={filledValues}
+          onFill={handleFillBlank}
+          wordBank={wordBank}
+          showWordBank={showWordBank}
+          results={isChecked ? results : null}
+          isChecked={isChecked}
+        />
+      </Card>
+      
+      {/* פאנל רמזים */}
+      <HintsPanel 
+        hints={hints}
+        revealedHints={getRevealedHints()}
+        canRevealMore={canRevealHint()}
+        onRequestHint={handleRequestHint}
+        hintsUsed={hintsUsed}
+        maxHints={maxHints}
+      />
+      
+      <div className="flex justify-end space-x-4 space-x-reverse">
+        {!isChecked && (
+          <Button onClick={checkAnswers} disabled={Object.keys(filledValues).length === 0}>
+            בדוק תשובות
+          </Button>
+        )}
+        
+        {isChecked && (
+          <Button 
+            onClick={handleComplete} 
+            variant={isComplete ? "primary" : "outline"}
+          >
+            {isComplete ? "סיים" : "נסה שוב"}
+          </Button>
+        )}
       </div>
       
-      {/* כפתור למעבר לטקסט הבא */}
-      {isAnswered && (
-        <div className="flex justify-end mt-4">
-          <Button onClick={handleNextText}>
-            {currentTextIndex < texts.length - 1 ? 'הטקסט הבא' : 'סיים'}
-          </Button>
-        </div>
+      {/* חלון סיכום למידה */}
+      {learningPopup && (
+        <LearningPopup
+          isOpen={showLearningPopup}
+          onClose={() => {
+            setShowLearningPopup(false);
+            if (onComplete) onComplete(score);
+          }}
+          onContinue={() => {
+            setShowLearningPopup(false);
+            if (onComplete) onComplete(score);
+          }}
+          title={learningPopup.title || "מה למדנו?"}
+          keyPoints={learningPopup.keyPoints || []}
+          mainValue={learningPopup.mainValue || ""}
+          thinkingPoints={learningPopup.thinkingPoints || []}
+          familyActivity={learningPopup.familyActivity || ""}
+        />
       )}
     </div>
   );
