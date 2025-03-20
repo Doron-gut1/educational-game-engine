@@ -1,3 +1,4 @@
+// src/modules/sorting/SortingGame.jsx
 import React, { useState, useEffect } from 'react';
 import { SortableItem } from './SortableItem';
 import { SortingContainer } from './SortingContainer';
@@ -5,6 +6,10 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
+import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
+import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש - src/components/ui/HintsPanel.jsx
+import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש - src/components/ui/SourceReference.jsx
+import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש - src/components/ui/LearningPopup.jsx
 
 /**
  * משחק מיון אייטמים לפי סדר או לקטגוריות
@@ -13,12 +18,18 @@ import { useScoring } from '../../hooks/useScoring';
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
  * @param {string} props.title - כותרת המשחק
  * @param {number} props.basePoints - נקודות בסיס לכל מיון נכון
+ * @param {Array} props.hints - רמזים למשחק
+ * @param {Object} props.sourceReference - מקור ורפרנס לשאלות
+ * @param {Object} props.learningPopup - מידע לחלון סיכום הלמידה
  */
 export function SortingGame({
   games = [],
   onComplete,
   title = 'משחק מיון',
-  basePoints = 10
+  basePoints = 10,
+  hints = [],
+  sourceReference = null,
+  learningPopup = null
 }) {
   const { state } = useGameContext();
   const { addScore } = useScoring();
@@ -33,6 +44,16 @@ export function SortingGame({
   const [correctSorts, setCorrectSorts] = useState(0);
   const [totalSorts, setTotalSorts] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [showLearningPopup, setShowLearningPopup] = useState(false);
+  
+  // שימוש בהוק רמזים
+  const { 
+    canRevealHint, 
+    revealNextHint, 
+    getRevealedHints,
+    hintsUsed,
+    maxHints
+  } = useHints(currentGame?.hints || hints);
   
   // המשחק הנוכחי
   const currentGame = games[currentGameIndex] || null;
@@ -104,6 +125,11 @@ export function SortingGame({
     }
   };
   
+  // בקשת רמז
+  const handleRequestHint = () => {
+    revealNextHint();
+  };
+  
   // הסרת פריט ממיכל יעד
   const removeItemFromContainer = (itemId, containerId) => {
     setTargetContainers(containers => 
@@ -167,6 +193,14 @@ export function SortingGame({
         return container;
       })
     );
+  };
+  
+  // טיפול בסגירת חלון הלמידה
+  const handleCloseLearningPopup = () => {
+    setShowLearningPopup(false);
+    if (onComplete) {
+      onComplete(totalScore);
+    }
   };
   
   // טיפול בבדיקת תשובות
@@ -249,7 +283,12 @@ export function SortingGame({
     if (currentGameIndex < games.length - 1) {
       setCurrentGameIndex(prevIndex => prevIndex + 1);
     } else {
-      setShowSummary(true);
+      // אם הוגדר חלון למידה, יש להציג אותו לפני הסיום
+      if (learningPopup) {
+        setShowLearningPopup(true);
+      } else {
+        setShowSummary(true);
+      }
     }
   };
   
@@ -341,6 +380,17 @@ export function SortingGame({
         <p className="text-gray-700 mb-4">{currentGame.description}</p>
       )}
       
+      {/* מקור ורפרנס */}
+      {(sourceReference || currentGame.sourceReference) && (
+        <SourceReference 
+          source={currentGame.sourceReference?.source || sourceReference?.source}
+          reference={currentGame.sourceReference?.reference || sourceReference?.reference}
+          expandable={true}
+          initiallyExpanded={false}
+          className="mb-4"
+        />
+      )}
+      
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="space-y-6">
           {/* מיכלי היעד */}
@@ -379,6 +429,16 @@ export function SortingGame({
             </div>
           </div>
           
+          {/* פאנל רמזים */}
+          <HintsPanel 
+            hints={currentGame.hints || hints}
+            revealedHints={getRevealedHints()}
+            canRevealMore={canRevealHint()}
+            onRequestHint={handleRequestHint}
+            hintsUsed={hintsUsed}
+            maxHints={maxHints}
+          />
+          
           {/* כפתור בדיקה */}
           {!isAnswered && (
             <div className="flex justify-end mt-6">
@@ -401,6 +461,20 @@ export function SortingGame({
           )}
         </div>
       </div>
+      
+      {/* חלון סיכום למידה */}
+      {learningPopup && (
+        <LearningPopup
+          isOpen={showLearningPopup}
+          onClose={handleCloseLearningPopup}
+          onContinue={handleCloseLearningPopup}
+          title={learningPopup.title || "מה למדנו?"}
+          keyPoints={learningPopup.keyPoints || []}
+          mainValue={learningPopup.mainValue || ""}
+          thinkingPoints={learningPopup.thinkingPoints || []}
+          familyActivity={learningPopup.familyActivity || ""}
+        />
+      )}
     </div>
   );
 }
