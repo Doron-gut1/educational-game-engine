@@ -3,278 +3,189 @@ import { MatchCard } from './MatchCard';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import { useScoring } from '../../hooks/useScoring';
-import { useTimer } from '../../hooks/useTimer';
 
 /**
- * משחק התאמות בין פריטים
+ * משחק התאמה בין פריטים
  * @param {Object} props - פרופס הרכיב
  * @param {Array} props.pairs - זוגות להתאמה
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
  * @param {string} props.title - כותרת המשחק
- * @param {string} props.description - תיאור המשחק
+ * @param {string} props.instructions - הוראות המשחק
  * @param {boolean} props.shuffleItems - האם לערבב את הפריטים
- * @param {number} props.basePoints - נקודות בסיס לזוג מתאים
- * @param {number} props.timeLimit - מגבלת זמן בשניות (אופציונלי)
+ * @param {number} props.basePoints - נקודות בסיס למציאת זוג
  */
 export function MatchingGame({
   pairs = [],
   onComplete,
-  title = 'משחק התאמות',
-  description = 'התאם את הפריטים המתאימים',
+  title = 'משחק התאמה',
+  instructions = 'חברו בין הפריטים המתאימים',
   shuffleItems = true,
-  basePoints = 10,
-  timeLimit = 0 // 0 משמעו ללא מגבלת זמן
+  basePoints = 10
 }) {
   const { addScore } = useScoring();
   
-  // הכנת הפריטים
-  const [leftItems, setLeftItems] = useState([]);
-  const [rightItems, setRightItems] = useState([]);
+  // שומרים את הפריטים בצורה נפרדת לאחר פיצול הזוגות
+  const [items1, setItems1] = useState([]);
+  const [items2, setItems2] = useState([]);
   
-  // מצב המשחק
-  const [selectedLeft, setSelectedLeft] = useState(null);
-  const [selectedRight, setSelectedRight] = useState(null);
+  // מצב היחידות
+  const [selectedItem1, setSelectedItem1] = useState(null); // מהצד השמאלי
+  const [selectedItem2, setSelectedItem2] = useState(null); // מהצד הימני
   const [matchedPairs, setMatchedPairs] = useState([]);
-  const [attempts, setAttempts] = useState(0);
-  const [showSummary, setShowSummary] = useState(false);
-  const [totalScore, setTotalScore] = useState(0);
+  const [score, setScore] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
   
-  // טיימר אם מוגדר זמן
-  const timer = useTimer({
-    initialTime: timeLimit > 0 ? timeLimit : 60,
-    isCountdown: timeLimit > 0,
-    autoStart: timeLimit > 0,
-    onTimeUp: () => {
-      if (timeLimit > 0) {
-        finishGame();
-      }
-    }
-  });
-  
-  // הכנת הפריטים
+  // פיצול הזוגות לשתי רשימות נפרדות
   useEffect(() => {
-    if (pairs.length === 0) return;
-    
-    // יצירת מערך של פריטים משמאל
     const left = pairs.map(pair => ({
       id: `left-${pair.id}`,
-      pairId: pair.id,
-      ...pair.item1
+      content: pair.item1,
+      pairId: pair.id
     }));
     
-    // יצירת מערך של פריטים מימין
     const right = pairs.map(pair => ({
       id: `right-${pair.id}`,
-      pairId: pair.id,
-      ...pair.item2
+      content: pair.item2,
+      pairId: pair.id
     }));
     
-    // ערבוב הפריטים אם נדרש
+    // ערבוב אם נדרש
     if (shuffleItems) {
-      setLeftItems(shuffleArray([...left]));
-      setRightItems(shuffleArray([...right]));
+      setItems1([...left].sort(() => Math.random() - 0.5));
+      setItems2([...right].sort(() => Math.random() - 0.5));
     } else {
-      setLeftItems(left);
-      setRightItems(right);
+      setItems1(left);
+      setItems2(right);
     }
   }, [pairs, shuffleItems]);
   
-  // פונקציה לערבוב מערך
-  const shuffleArray = (array) => {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  // בחירת פריט מהצד השמאלי
+  const handleSelectItem1 = (itemId) => {
+    // אם הפריט כבר מותאם, לא עושים כלום
+    if (matchedPairs.includes(items1.find(item => item.id === itemId)?.pairId)) {
+      return;
     }
-    return newArray;
-  };
-  
-  // בחירת פריט משמאל
-  const handleLeftSelect = (itemId) => {
-    // אם הפריט כבר נמצא בזוג מתאים, אין לאפשר בחירה
-    const isAlreadyMatched = matchedPairs.some(match => 
-      match.leftId === itemId || match.rightId === selectedRight
-    );
     
-    if (isAlreadyMatched) return;
+    setSelectedItem1(itemId);
     
-    setSelectedLeft(itemId);
-    
-    // אם יש גם פריט מימין, בדיקת התאמה
-    if (selectedRight) {
-      checkMatch(itemId, selectedRight);
+    // אם יש כבר בחירה מהצד השני, בודקים התאמה
+    if (selectedItem2) {
+      checkMatch(itemId, selectedItem2);
     }
   };
   
-  // בחירת פריט מימין
-  const handleRightSelect = (itemId) => {
-    // אם הפריט כבר נמצא בזוג מתאים, אין לאפשר בחירה
-    const isAlreadyMatched = matchedPairs.some(match => 
-      match.rightId === itemId || match.leftId === selectedLeft
-    );
+  // בחירת פריט מהצד הימני
+  const handleSelectItem2 = (itemId) => {
+    // אם הפריט כבר מותאם, לא עושים כלום
+    if (matchedPairs.includes(items2.find(item => item.id === itemId)?.pairId)) {
+      return;
+    }
     
-    if (isAlreadyMatched) return;
+    setSelectedItem2(itemId);
     
-    setSelectedRight(itemId);
-    
-    // אם יש גם פריט משמאל, בדיקת התאמה
-    if (selectedLeft) {
-      checkMatch(selectedLeft, itemId);
+    // אם יש כבר בחירה מהצד השני, בודקים התאמה
+    if (selectedItem1) {
+      checkMatch(selectedItem1, itemId);
     }
   };
   
-  // בדיקת התאמה בין שני פריטים
-  const checkMatch = (leftId, rightId) => {
-    setAttempts(prev => prev + 1);
+  // בדיקת התאמה בין שני פריטים שנבחרו
+  const checkMatch = (id1, id2) => {
+    const item1 = items1.find(item => item.id === id1);
+    const item2 = items2.find(item => item.id === id2);
     
-    const leftItem = leftItems.find(item => item.id === leftId);
-    const rightItem = rightItems.find(item => item.id === rightId);
-    
-    // בדיקה אם ה-pairId תואם
-    const isMatch = leftItem && rightItem && leftItem.pairId === rightItem.pairId;
-    
-    if (isMatch) {
-      // הוספת הזוג לרשימת ההתאמות
-      setMatchedPairs(prev => [
-        ...prev,
-        { leftId, rightId, pairId: leftItem.pairId }
-      ]);
+    if (item1 && item2 && item1.pairId === item2.pairId) {
+      // התאמה מוצלחת
+      setMatchedPairs(prev => [...prev, item1.pairId]);
       
       // הוספת ניקוד
-      const points = pairs.find(p => p.id === leftItem.pairId)?.points || basePoints;
-      setTotalScore(prev => prev + points);
+      const pair = pairs.find(p => p.id === item1.pairId);
+      const points = pair.points || basePoints;
+      setScore(prev => prev + points);
       addScore(points);
       
-      // בדיקה אם סיימנו את כל הזוגות
+      // איפוס בחירות
+      setSelectedItem1(null);
+      setSelectedItem2(null);
+      
+      // בדיקה אם המשחק הסתיים
       if (matchedPairs.length + 1 === pairs.length) {
-        // אם יש טיימר, הוספת בונוס זמן
-        if (timeLimit > 0) {
-          const timeBonus = calculateTimeBonus(timeLimit, timer.time);
-          if (timeBonus > 0) {
-            setTotalScore(prev => prev + timeBonus);
-            addScore(timeBonus);
-          }
+        setIsComplete(true);
+        if (onComplete) {
+          setTimeout(() => {
+            onComplete(score + points);
+          }, 1500);
         }
-        
-        // השהייה קצרה לפני הצגת הסיכום
-        setTimeout(() => {
-          finishGame();
-        }, 1000);
       }
-    }
-    
-    // ניקוי הבחירות
-    setSelectedLeft(null);
-    setSelectedRight(null);
-  };
-  
-  // חישוב בונוס זמן
-  const calculateTimeBonus = (maxTime, remainingTime) => {
-    // בונוס יחסי לזמן שנשאר
-    return Math.round((remainingTime / maxTime) * basePoints * pairs.length * 0.5);
-  };
-  
-  // סיום המשחק
-  const finishGame = () => {
-    if (timer.isRunning) {
-      timer.stop();
-    }
-    setShowSummary(true);
-  };
-  
-  // השלמת המשחק
-  const handleComplete = () => {
-    if (onComplete) {
-      onComplete(totalScore);
+    } else {
+      // התאמה לא מוצלחת, איפוס לאחר השהייה
+      setTimeout(() => {
+        setSelectedItem1(null);
+        setSelectedItem2(null);
+      }, 1000);
     }
   };
   
-  // הצגת מסך סיכום
-  if (showSummary) {
-    const successRate = attempts > 0 ? Math.round((matchedPairs.length / attempts) * 100) : 0;
-    
-    return (
-      <div className="p-6 bg-white rounded-lg shadow-lg text-center">
-        <h2 className="text-2xl font-bold text-green-800 mb-4">סיכום</h2>
-        <p className="text-xl mb-4">צברת {totalScore} נקודות</p>
-        <p className="text-lg mb-2">מצאת {matchedPairs.length} זוגות מתוך {pairs.length}</p>
-        <p className="text-lg mb-6">אחוז הצלחה: {successRate}%</p>
-        
-        {timeLimit > 0 && (
-          <p className="text-lg mb-6">זמן שנותר: {timer.formattedTime}</p>
-        )}
-        
-        <Button onClick={handleComplete} size="large">סיים</Button>
-      </div>
-    );
-  }
+  // בדיקה אם פריט מסוים מותאם
+  const isPairMatched = (pairId) => {
+    return matchedPairs.includes(pairId);
+  };
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h2 className="text-xl font-bold">{title}</h2>
-          {description && <p className="text-gray-600">{description}</p>}
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold">{title}</h2>
+        <div className="text-sm text-gray-500">
+          {matchedPairs.length} מתוך {pairs.length} זוגות
         </div>
-        
-        {timeLimit > 0 && (
-          <div className="text-xl font-bold">
-            {timer.formattedTime}
-          </div>
-        )}
       </div>
+      
+      {instructions && (
+        <p className="text-gray-600">{instructions}</p>
+      )}
       
       <ProgressBar 
         value={matchedPairs.length} 
         max={pairs.length} 
         color="primary" 
-        showValue={true}
-        label={`${matchedPairs.length} מתוך ${pairs.length} זוגות`}
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* עמודה שמאלית */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold">פריטים</h3>
-          <div className="space-y-2">
-            {leftItems.map(item => {
-              const isMatched = matchedPairs.some(match => match.leftId === item.id);
-              const isSelected = selectedLeft === item.id;
-              
-              return (
-                <MatchCard
-                  key={item.id}
-                  item={item}
-                  isMatched={isMatched}
-                  isSelected={isSelected}
-                  onClick={() => !isMatched && handleLeftSelect(item.id)}
-                />
-              );
-            })}
-          </div>
+        {/* טור שמאלי */}
+        <div className="space-y-3">
+          {items1.map(item => (
+            <MatchCard
+              key={item.id}
+              id={item.id}
+              content={item.content}
+              isSelected={selectedItem1 === item.id}
+              isMatched={isPairMatched(item.pairId)}
+              onClick={() => handleSelectItem1(item.id)}
+            />
+          ))}
         </div>
         
-        {/* עמודה ימנית */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold">התאמות</h3>
-          <div className="space-y-2">
-            {rightItems.map(item => {
-              const isMatched = matchedPairs.some(match => match.rightId === item.id);
-              const isSelected = selectedRight === item.id;
-              
-              return (
-                <MatchCard
-                  key={item.id}
-                  item={item}
-                  isMatched={isMatched}
-                  isSelected={isSelected}
-                  onClick={() => !isMatched && handleRightSelect(item.id)}
-                />
-              );
-            })}
-          </div>
+        {/* טור ימני */}
+        <div className="space-y-3">
+          {items2.map(item => (
+            <MatchCard
+              key={item.id}
+              id={item.id}
+              content={item.content}
+              isSelected={selectedItem2 === item.id}
+              isMatched={isPairMatched(item.pairId)}
+              onClick={() => handleSelectItem2(item.id)}
+            />
+          ))}
         </div>
       </div>
+      
+      {isComplete && (
+        <div className="text-center p-4 bg-green-50 rounded-lg">
+          <h3 className="text-xl font-bold text-green-800 mb-2">כל הכבוד! סיימת את המשחק.</h3>
+          <p>צברת {score} נקודות</p>
+        </div>
+      )}
     </div>
   );
 }
