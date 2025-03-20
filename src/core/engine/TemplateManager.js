@@ -6,27 +6,6 @@ export class TemplateManager {
   constructor() {
     this.templates = {};
     this.loadedTemplates = [];
-    
-    // מיפוי של מזהי תבניות לשמות קבצים
-    this.templateFileMapping = {
-      'quest_journey': 'questJourney',
-      // ניתן להוסיף כאן מיפויים נוספים בעתיד אם יהיו אי התאמות נוספות
-    };
-  }
-
-  /**
-   * מתרגם מזהה תבנית לשם קובץ
-   * @param {string} templateId - מזהה התבנית
-   * @returns {string} - שם הקובץ התואם
-   */
-  getTemplateFileName(templateId) {
-    // אם יש מיפוי מפורש, השתמש בו
-    if (this.templateFileMapping[templateId]) {
-      return this.templateFileMapping[templateId];
-    }
-    
-    // אחרת, השתמש במזהה כמו שהוא
-    return templateId;
   }
 
   /**
@@ -41,17 +20,18 @@ export class TemplateManager {
     }
 
     try {
-      // המרת מזהה התבנית לשם קובץ מתאים
-      const templateFileName = this.getTemplateFileName(templateId);
+      // טעינת כל התבניות מהאינדקס
+      const { templates } = await import('../../templates/index.js');
       
-      // טעינת הקובץ
-      const module = await import(`../../templates/${templateFileName}.js`);
-      const template = module.default || module;
-      
-      this.templates[templateId] = template;
-      this.loadedTemplates.push(templateId);
-      
-      return template;
+      // חיפוש התבנית הספציפית
+      if (templates[templateId]) {
+        const template = templates[templateId];
+        this.templates[templateId] = template;
+        this.loadedTemplates.push(templateId);
+        return template;
+      } else {
+        throw new Error(`Template ${templateId} not found in templates index`);
+      }
     } catch (error) {
       console.error(`Failed to load template ${templateId}:`, error);
       throw new Error(`Template ${templateId} not found or invalid`);
@@ -144,12 +124,22 @@ export class TemplateManager {
    * @returns {Promise<Array>} - רשימת התבניות הזמינות
    */
   async getAvailableTemplates() {
-    // כרגע מחזיר רק תבניות שנטענו
-    // בעתיד יכול לבצע סריקה דינמית של כל התבניות הזמינות
-    return this.loadedTemplates.map(id => ({
-      id,
-      name: this.templates[id].name,
-      description: this.templates[id].description
-    }));
+    try {
+      // טעינת כל התבניות
+      const { availableTemplates } = await import('../../templates/index.js');
+      return availableTemplates.map(template => ({
+        id: template.id,
+        name: template.name,
+        description: template.description
+      }));
+    } catch (error) {
+      console.error('Failed to load available templates:', error);
+      // אם לא ניתן לטעון את כל התבניות הזמינות, החזר את מה שכבר נטען
+      return this.loadedTemplates.map(id => ({
+        id,
+        name: this.templates[id].name,
+        description: this.templates[id].description
+      }));
+    }
   }
 }
