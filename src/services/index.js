@@ -13,3 +13,9 @@ export * from './feedbackService';
 
 // שירותי אחסון
 export * from './storageService';
+
+// ניהול מצב מאובטח
+export * from './StateManager';
+
+// בקר שלבים
+export * from './StageController';
