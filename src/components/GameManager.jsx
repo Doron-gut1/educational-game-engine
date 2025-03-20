@@ -6,6 +6,7 @@ import { ProgressBar } from './ui/ProgressBar';
 import { TemplateManager } from '../core/engine/TemplateManager';
 import { IntroCard } from './layout/IntroCard';
 import { Card } from './ui/Card';
+import { LoggerService } from '../services';
 
 // מודולי משחק
 import { MultiChoiceGame } from '../modules/multiChoice/MultiChoiceGame';
@@ -26,7 +27,15 @@ export function GameManager({
   onComplete,
   onReset
 }) {
-  const { gameState, state, gameConfig } = useGameContext();
+  // שימוש ב-state, stateManager ו-stageController החדשים
+  const { 
+    state, 
+    gameConfig, 
+    moveToStage, 
+    completeStage,
+    addScore
+  } = useGameContext();
+  
   const { currentStage, completedStages, progress, moveToNextStage } = useGameProgress();
   
   const [template, setTemplate] = useState(null);
@@ -44,8 +53,9 @@ export function GameManager({
         const loadedTemplate = await templateManager.loadTemplate(templateId);
         setTemplate(loadedTemplate);
         setError(null);
+        LoggerService.info(`[GameManager] Template ${templateId} loaded successfully`);
       } catch (error) {
-        console.error("שגיאה בטעינת תבנית המשחק:", error);
+        LoggerService.error("[GameManager] Error loading template:", error);
         setError(`שגיאה בטעינת תבנית המשחק: ${error.message}`);
       }
     }
@@ -58,6 +68,8 @@ export function GameManager({
     if (!gameConfig?.content?.stages || !currentStage) {
       return;
     }
+
+    LoggerService.debug(`[GameManager] Current stage changed to: ${currentStage}`);
 
     // בדיקה אם מדובר בשלב מבוא
     if (currentStage === 'intro') {
@@ -83,7 +95,7 @@ export function GameManager({
     if (stageData) {
       setCurrentStageData(stageData);
     } else {
-      console.warn(`לא נמצאו נתונים לשלב: ${currentStage}`);
+      LoggerService.warn(`[GameManager] No data found for stage: ${currentStage}`);
       setError(`לא נמצאו נתונים לשלב: ${currentStage}`);
     }
   }, [currentStage, gameConfig]);
@@ -92,18 +104,27 @@ export function GameManager({
   const handleStageComplete = (points) => {
     // מניעת קריאות כפולות
     if (stageMoveFlag) {
+      LoggerService.debug("[GameManager] Stage transition already in progress, ignoring completion request");
       return;
     }
     
     // מגדירים דגל שמונע קריאות כפולות
     setStageMoveFlag(true);
     
+    // הוספת ניקוד אם יש
+    if (points > 0) {
+      LoggerService.info(`[GameManager] Adding ${points} points to score`);
+      addScore(points);
+    }
+    
     // אם זהו שלב המבוא, עוברים לשלב הראשון
     if (isIntro) {
       if (gameConfig?.content?.stages?.length > 0) {
         const firstStage = gameConfig.content.stages[0].id;
-        gameState.state.currentStage = firstStage;
-        gameState.notifyListeners();
+        LoggerService.info(`[GameManager] Moving from intro to first stage: ${firstStage}`);
+        moveToStage(firstStage);
+      } else {
+        LoggerService.warn("[GameManager] No stages found after intro");
       }
       
       // איפוס הדגל לאחר זמן קצר
@@ -116,6 +137,7 @@ export function GameManager({
     // אם זהו שלב הסיום, מסיימים את המשחק
     if (isOutro) {
       if (onComplete) {
+        LoggerService.info(`[GameManager] Game completed with score: ${state.score}`);
         onComplete(state.score);
       }
       
@@ -126,13 +148,20 @@ export function GameManager({
       return;
     }
 
+    // סימון השלב הנוכחי כמושלם
+    if (currentStage) {
+      LoggerService.info(`[GameManager] Completing stage: ${currentStage}`);
+      completeStage(currentStage, 0); // ניקוד כבר נוסף קודם לכן
+    }
+    
     // קידום לשלב הבא
     const hasNextStage = moveToNextStage();
+    LoggerService.debug(`[GameManager] Has next stage: ${hasNextStage}`);
     
     // אם אין שלב נוסף, עוברים לסיום
     if (!hasNextStage && gameConfig?.content?.outro) {
-      gameState.state.currentStage = 'outro';
-      gameState.notifyListeners();
+      LoggerService.info("[GameManager] No more stages, moving to outro");
+      moveToStage('outro');
     }
     
     // איפוס הדגל לאחר זמן קצר
@@ -424,6 +453,7 @@ function renderStageContent(stageData, onComplete) {
         );
       
       default:
+        LoggerService.warn(`[GameManager] Unsupported stage type: ${stageData.type}`);
         return (
           <div className="text-center p-6 bg-gray-50 rounded-lg">
             <p>סוג שלב לא נתמך: {stageData.type}</p>
@@ -437,7 +467,7 @@ function renderStageContent(stageData, onComplete) {
         );
     }
   } catch (error) {
-    console.error("שגיאה בהצגת השלב:", error);
+    LoggerService.error("[GameManager] Error rendering stage:", error);
     return (
       <div className="text-center p-6 bg-red-50 rounded-lg">
         <p className="text-red-500 font-bold mb-4">שגיאה בהצגת השלב</p>
