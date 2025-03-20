@@ -1,7 +1,42 @@
+import { LoggerService } from './loggerService';
+
 /**
- * שירות לטעינת תוכן משחק
+ * שירות לטעינת תוכן משחק - גרסה משודרגת
  */
 export class ContentLoader {
+  /**
+   * טעינת כל הנתונים הדרושים למשחק
+   * @param {string} gameId - מזהה המשחק
+   * @returns {Promise<Object>} - כל נתוני המשחק
+   */
+  static async loadGame(gameId) {
+    LoggerService.info(`טוען משחק: ${gameId}`);
+    
+    try {
+      // טעינה מקבילה של כל הנתונים
+      const [config, content, characters, theme] = await Promise.all([
+        this.loadGameConfig(gameId),
+        this.loadGameContent(gameId),
+        this.loadCharacters(gameId),
+        this.loadTheme(gameId)
+      ]);
+      
+      // שילוב כל הנתונים לאובייקט אחד
+      const gameData = {
+        ...config,
+        content,
+        characters,
+        theme
+      };
+      
+      LoggerService.info(`משחק נטען בהצלחה: ${gameId}`);
+      return gameData;
+    } catch (error) {
+      LoggerService.error(`שגיאה בטעינת משחק ${gameId}:`, error);
+      throw new Error(`שגיאה בטעינת משחק: ${error.message}`);
+    }
+  }
+
   /**
    * טעינת הגדרות משחק ספציפי
    * @param {string} gameId - מזהה המשחק
@@ -9,13 +44,11 @@ export class ContentLoader {
    */
   static async loadGameConfig(gameId) {
     try {
-      // בשלב הראשוני בלבד משאיר אפשרות לטעינה מ-import
-      // בשלב מתקדם יותר ניתן להרחיב לטעינה מ-API או מקובץ חיצוני
       const config = await import(`../games/${gameId}/config.js`);
       return config.default || config;
     } catch (error) {
-      console.error(`Failed to load game config for ${gameId}:`, error);
-      throw new Error(`Game ${gameId} not found or invalid`);
+      LoggerService.error(`שגיאה בטעינת קונפיגורציית משחק ${gameId}:`, error);
+      throw error;
     }
   }
 
@@ -26,12 +59,11 @@ export class ContentLoader {
    */
   static async loadGameContent(gameId) {
     try {
-      // בשלב הראשוני בלבד משאיר אפשרות לטעינה מ-import
       const content = await import(`../games/${gameId}/data.json`);
       return content.default || content;
     } catch (error) {
-      console.error(`Failed to load game content for ${gameId}:`, error);
-      throw new Error(`Content for game ${gameId} not found or invalid`);
+      LoggerService.error(`שגיאה בטעינת תוכן משחק ${gameId}:`, error);
+      throw error;
     }
   }
 
@@ -45,40 +77,45 @@ export class ContentLoader {
       const characters = await import(`../games/${gameId}/characters.js`);
       return characters.default || characters;
     } catch (error) {
-      console.error(`Failed to load characters for ${gameId}:`, error);
-      // דמויות אינן חובה, לכן אם אין - מחזירים אובייקט ריק
-      return {};
+      LoggerService.warn(`לא נמצאו דמויות למשחק ${gameId}:`, error);
+      return {}; // דמויות אינן חובה, לכן אם אין - מחזירים אובייקט ריק
     }
   }
   
   /**
-   * טעינת הגדרות נכסי מדיה
+   * טעינת הגדרות תמה
    * @param {string} gameId - מזהה המשחק
-   * @returns {Promise<Object>} - מיפוי נכסי מדיה
+   * @returns {Promise<Object>} - הגדרות התמה
    */
-  static async loadMediaAssets(gameId) {
+  static async loadTheme(gameId) {
     try {
-      const mediaAssets = await import(`../games/${gameId}/mediaAssets.js`);
-      return mediaAssets.default || mediaAssets;
+      // ניסיון לטעון תמה ספציפית למשחק
+      const theme = await import(`../themes/${gameId}Theme.js`);
+      return theme.default || theme;
     } catch (error) {
-      console.error(`Failed to load media assets for ${gameId}:`, error);
-      // מיפוי נכסים אינו חובה, לכן אם אין - מחזירים אובייקט ריק
-      return {};
+      try {
+        // אם אין תמה ספציפית, משתמשים בתמה ברירת מחדל
+        LoggerService.info(`לא נמצאה תמה ספציפית ל-${gameId}, משתמש בתמה כללית`);
+        const defaultTheme = await import('../themes/defaultTheme.js');
+        return defaultTheme.default || defaultTheme;
+      } catch (e) {
+        LoggerService.error("שגיאה בטעינת תמה:", e);
+        throw e;
+      }
     }
   }
-  
+
   /**
-   * טעינת תבנית משחק
-   * @param {string} templateId - מזהה התבנית
-   * @returns {Promise<Object>} - הגדרות התבנית
+   * בדיקה אם משחק קיים במערכת
+   * @param {string} gameId - מזהה המשחק
+   * @returns {Promise<boolean>} - האם המשחק קיים
    */
-  static async loadTemplate(templateId) {
+  static async doesGameExist(gameId) {
     try {
-      const template = await import(`../templates/${templateId}.js`);
-      return template.default || template;
+      await this.loadGameConfig(gameId);
+      return true;
     } catch (error) {
-      console.error(`Failed to load template ${templateId}:`, error);
-      throw new Error(`Template ${templateId} not found or invalid`);
+      return false;
     }
   }
 }
