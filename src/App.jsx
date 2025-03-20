@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { defaultTheme } from './themes/defaultTheme';
 import './App.css';
@@ -8,13 +8,22 @@ import './App.css';
 import PassoverQuestGame from './games/passover_quest/PassoverQuestGame';
 
 function App() {
+  console.log("App component initialized");
+  
   const [selectedGame, setSelectedGame] = useState(null);
 
+  // Debug effect to track initial render and state changes
+  useEffect(() => {
+    console.log("App mounted/updated. Selected game:", selectedGame);
+  }, [selectedGame]);
+
   const handleGameSelect = (gameId) => {
+    console.log("Game selected:", gameId);
     setSelectedGame(gameId);
   };
 
   const renderGameSelector = () => {
+    console.log("Rendering game selector");
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center p-4" dir="rtl">
         <div className="max-w-4xl w-full bg-white rounded-lg shadow-xl p-8">
@@ -51,9 +60,33 @@ function App() {
   };
 
   const renderSelectedGame = () => {
+    console.log("Rendering selected game:", selectedGame);
+    
     switch (selectedGame) {
       case 'passover':
-        return <PassoverQuestGame />;
+        console.log("Attempting to render PassoverQuestGame");
+        try {
+          return <PassoverQuestGame />;
+        } catch (error) {
+          console.error("Error rendering PassoverQuestGame:", error);
+          return (
+            <div className="min-h-screen bg-red-50 flex items-center justify-center p-4" dir="rtl">
+              <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg">
+                <h1 className="text-2xl font-bold mb-4 text-red-600">שגיאה בטעינת המשחק</h1>
+                <p className="mb-4">אירעה שגיאה בעת טעינת משחק הפסח</p>
+                <pre className="bg-red-50 p-4 rounded-md overflow-auto text-sm mb-4">
+                  {error.toString()}
+                </pre>
+                <button 
+                  onClick={() => setSelectedGame(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                >
+                  חזרה לבחירת משחק
+                </button>
+              </div>
+            </div>
+          );
+        }
       case 'tubishvat':
         // צריך להוסיף את המשחק ט"ו בשבט אם יהיה מוכן
         return (
@@ -75,6 +108,7 @@ function App() {
     }
   };
 
+  console.log("App render");
   return (
     <ThemeProvider initialTheme={defaultTheme}>
       <div className="app">
