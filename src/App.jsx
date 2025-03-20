@@ -5,7 +5,7 @@ import { defaultTheme } from './themes/defaultTheme';
 import './App.css';
 
 // Import game components
-import PassoverQuestGame from './games/passover_quest/PassoverQuestGame';
+import PassoverQuestGame from './games/passover/PassoverQuestGame.jsx';
 
 function App() {
   console.log("App component initialized");

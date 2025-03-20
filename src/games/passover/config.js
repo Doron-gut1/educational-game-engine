@@ -4,7 +4,7 @@ import { questJourneyTemplate } from "../../templates/questJourney";
  * קונפיגורציית משחק פסח - "המסע לחירות"
  */
 export const passoverQuestConfig = {
-  id: "passover_quest",
+  id: "passover",
   name: "המסע לחירות",
   template: questJourneyTemplate.id,
   theme: "passover",
