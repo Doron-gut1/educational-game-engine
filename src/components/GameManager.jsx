@@ -24,6 +24,8 @@ export function GameManager({
   onComplete,
   onReset
 }) {
+  console.log("GameManager component initialized with templateId:", templateId);
+  
   const { gameState, state, gameConfig } = useGameContext();
   const { currentStage, completedStages, progress, moveToNextStage } = useGameProgress();
   
@@ -31,16 +33,30 @@ export function GameManager({
   const [isIntro, setIsIntro] = useState(true);
   const [isOutro, setIsOutro] = useState(false);
   const [currentStageData, setCurrentStageData] = useState(null);
+  const [error, setError] = useState(null);
   const [templateManager] = useState(() => new TemplateManager());
+  
+  console.log("GameManager initial state:", { 
+    currentStage,
+    completedStages,
+    progress,
+    gameConfig
+  });
 
   // טעינת תבנית המשחק
   useEffect(() => {
+    console.log("GameManager: Loading template:", templateId);
+    
     async function loadTemplate() {
       try {
+        console.log("Calling templateManager.loadTemplate with:", templateId);
         const loadedTemplate = await templateManager.loadTemplate(templateId);
+        console.log("Template loaded successfully:", loadedTemplate);
         setTemplate(loadedTemplate);
+        setError(null);
       } catch (error) {
         console.error("Failed to load template:", error);
+        setError(`שגיאה בטעינת תבנית המשחק: ${error.message}`);
       }
     }
 
@@ -49,12 +65,17 @@ export function GameManager({
 
   // עדכון שלב נוכחי כאשר משתנה
   useEffect(() => {
+    console.log("GameManager: Current stage changed to:", currentStage);
+    console.log("GameManager: Game content:", gameConfig?.content);
+    
     if (!gameConfig?.content?.stages || !currentStage) {
+      console.warn("Missing gameConfig.content.stages or currentStage");
       return;
     }
 
     // בדיקה אם מדובר בשלב מבוא
     if (currentStage === 'intro') {
+      console.log("Setting stage to intro");
       setIsIntro(true);
       setIsOutro(false);
       setCurrentStageData(gameConfig.content.intro);
@@ -63,6 +84,7 @@ export function GameManager({
 
     // בדיקה אם מדובר בשלב סיום
     if (currentStage === 'outro') {
+      console.log("Setting stage to outro");
       setIsIntro(false);
       setIsOutro(true);
       setCurrentStageData(gameConfig.content.outro);
@@ -70,26 +92,41 @@ export function GameManager({
     }
 
     // מציאת נתוני השלב הנוכחי
+    console.log("Finding stage data for:", currentStage);
     setIsIntro(false);
     setIsOutro(false);
     const stageData = gameConfig.content.stages.find(stage => stage.id === currentStage);
-    setCurrentStageData(stageData);
+    
+    if (stageData) {
+      console.log("Found stage data:", stageData);
+      setCurrentStageData(stageData);
+    } else {
+      console.warn(`Stage data not found for ID: ${currentStage}`);
+      setError(`לא נמצאו נתונים לשלב: ${currentStage}`);
+    }
   }, [currentStage, gameConfig]);
 
   // טיפול בסיום שלב
   const handleStageComplete = (points) => {
+    console.log("Stage completed with points:", points);
+    
     // אם זהו שלב המבוא, עוברים לשלב הראשון
     if (isIntro) {
+      console.log("Intro stage completed, moving to first stage");
       if (gameConfig?.content?.stages?.length > 0) {
         const firstStage = gameConfig.content.stages[0].id;
+        console.log("Moving to first stage:", firstStage);
         gameState.state.currentStage = firstStage;
         gameState.notifyListeners();
+      } else {
+        console.warn("No stages defined in gameConfig.content");
       }
       return;
     }
 
     // אם זהו שלב הסיום, מסיימים את המשחק
     if (isOutro) {
+      console.log("Outro stage completed, game finished with score:", state.score);
       if (onComplete) {
         onComplete(state.score);
       }
@@ -97,22 +134,49 @@ export function GameManager({
     }
 
     // קידום לשלב הבא
+    console.log("Moving to next stage");
     const hasNextStage = moveToNextStage();
+    console.log("Has next stage:", hasNextStage);
     
     // אם אין שלב נוסף, עוברים לסיום
     if (!hasNextStage && gameConfig?.content?.outro) {
+      console.log("No more stages, moving to outro");
       gameState.state.currentStage = 'outro';
       gameState.notifyListeners();
     }
   };
 
+  // אם יש שגיאה, מציגים אותה
+  if (error) {
+    return (
+      <div className="p-6 bg-red-50 rounded-lg shadow-lg text-center">
+        <div className="text-red-500 text-xl font-bold mb-4">שגיאה</div>
+        <p className="mb-4">{error}</p>
+        {onReset && (
+          <Button 
+            onClick={onReset} 
+            variant="outline" 
+            className="mr-2"
+          >
+            נסה שוב
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   // אם אין תבנית או תוכן, מציגים מסך טעינה
   if (!template || !gameConfig?.content) {
+    console.log("Template or content missing, showing loading screen");
     return (
       <div className="flex items-center justify-center min-h-[300px]">
         <div className="text-center">
           <div className="w-12 h-12 border-t-4 border-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p>טוען משחק...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {!template ? "טוען תבנית..." : ""}
+            {!gameConfig?.content ? "טוען תוכן..." : ""}
+          </p>
         </div>
       </div>
     );
@@ -120,7 +184,21 @@ export function GameManager({
 
   // הצגת מסך מבוא
   if (isIntro) {
+    console.log("Rendering intro screen");
     const introData = gameConfig.content.intro;
+    
+    if (!introData) {
+      console.warn("Intro data is missing");
+      return (
+        <div className="p-6 bg-yellow-50 rounded-lg shadow-lg text-center">
+          <p className="mb-4">נתוני שלב המבוא חסרים</p>
+          <Button onClick={() => handleStageComplete(0)}>
+            המשך למשחק
+          </Button>
+        </div>
+      );
+    }
+    
     return (
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
         <h1 className="text-3xl font-bold text-center mb-6">{introData.title}</h1>
@@ -152,7 +230,21 @@ export function GameManager({
 
   // הצגת מסך סיום
   if (isOutro) {
+    console.log("Rendering outro screen");
     const outroData = gameConfig.content.outro;
+    
+    if (!outroData) {
+      console.warn("Outro data is missing");
+      return (
+        <div className="p-6 bg-yellow-50 rounded-lg shadow-lg text-center">
+          <p className="mb-4">נתוני שלב הסיום חסרים</p>
+          <Button onClick={() => handleStageComplete(0)}>
+            סיים את המשחק
+          </Button>
+        </div>
+      );
+    }
+    
     return (
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
         <h1 className="text-3xl font-bold text-center mb-6">{outroData.title}</h1>
@@ -208,12 +300,24 @@ export function GameManager({
 
   // הצגת שלב נוכחי
   if (!currentStageData) {
+    console.warn("Current stage data is missing");
     return (
-      <div className="text-center p-6">
-        <p className="text-red-500">שלב לא נמצא</p>
+      <div className="text-center p-6 bg-red-50 rounded-lg shadow-lg">
+        <p className="text-red-500 font-bold mb-4">שלב לא נמצא</p>
+        <p className="text-gray-700 mb-4">לא נמצאו נתונים לשלב הנוכחי: {currentStage}</p>
+        {onReset && (
+          <Button 
+            onClick={onReset} 
+            variant="outline"
+          >
+            התחל מחדש
+          </Button>
+        )}
       </div>
     );
   }
+  
+  console.log("Rendering current stage:", currentStageData);
 
   return (
     <div className="space-y-6">
@@ -236,8 +340,26 @@ export function GameManager({
         <p className="text-gray-600 mb-4">{currentStageData.description}</p>
       )}
       
+      {/* דיאלוג פתיחה אם יש */}
+      {currentStageData.introDialogue && (
+        <div className="mb-6 space-y-3 bg-blue-50 p-4 rounded-lg">
+          {currentStageData.introDialogue.map((line, index) => (
+            <div key={index} className="p-3 bg-white rounded-lg">
+              <p>
+                {line.character && (
+                  <span className="font-bold mr-2">{line.character}:</span>
+                )}
+                {line.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+      
       {/* תוכן השלב לפי סוג */}
-      {renderStageContent(currentStageData, handleStageComplete)}
+      <div className="bg-white rounded-lg shadow-lg p-4">
+        {renderStageContent(currentStageData, handleStageComplete)}
+      </div>
     </div>
   );
 }
@@ -248,99 +370,133 @@ export function GameManager({
  * @param {Function} onComplete - קולבק בסיום השלב
  */
 function renderStageContent(stageData, onComplete) {
-  switch (stageData.type) {
-    case 'multi_choice':
-      return (
-        <MultiChoiceGame 
-          questions={stageData.questions || []}
-          title={stageData.title}
-          onComplete={onComplete}
-        />
-      );
-    
-    case 'drag_drop':
-      return (
-        <DragDropGame 
-          items={stageData.items || []}
-          dropZones={stageData.dropZones || []}
-          title={stageData.title}
-          onComplete={onComplete}
-        />
-      );
-    
-    case 'matching':
-      return (
-        <MatchingGame 
-          pairs={stageData.pairs || []}
-          title={stageData.title}
-          instructions={stageData.description}
-          shuffleItems={stageData.shuffleItems !== false}
-          onComplete={onComplete}
-        />
-      );
+  console.log("Rendering stage content of type:", stageData.type);
+  
+  try {
+    switch (stageData.type) {
+      case 'multi_choice':
+        return (
+          <MultiChoiceGame 
+            questions={stageData.questions || []}
+            title={stageData.title}
+            sourceReference={stageData.sourceReference}
+            learningPopup={stageData.learningPopup}
+            onComplete={onComplete}
+          />
+        );
       
-    case 'fill_in_blanks':
-      return (
-        <FillInBlanksGame 
-          text={stageData.text || ""}
-          blanks={stageData.blanks || {}}
-          wordBank={stageData.wordBank || []}
-          showWordBank={stageData.showWordBank !== false}
-          title={stageData.title}
-          onComplete={onComplete}
-        />
-      );
+      case 'drag_drop':
+        return (
+          <DragDropGame 
+            items={stageData.items || []}
+            dropZones={stageData.dropZones || []}
+            title={stageData.title}
+            sourceReference={stageData.sourceReference}
+            learningPopup={stageData.learningPopup}
+            onComplete={onComplete}
+          />
+        );
       
-    case 'word_search':
-      return (
-        <WordSearchGame 
-          grid={stageData.grid || []}
-          words={stageData.words || []}
-          title={stageData.title}
-          timeLimit={stageData.timeLimit || 0}
-          onComplete={onComplete}
-        />
-      );
+      case 'matching':
+        return (
+          <MatchingGame 
+            pairs={stageData.pairs || []}
+            title={stageData.title}
+            instructions={stageData.description}
+            shuffleItems={stageData.shuffleItems !== false}
+            sourceReference={stageData.sourceReference}
+            learningPopup={stageData.learningPopup}
+            onComplete={onComplete}
+          />
+        );
+        
+      case 'fill_in_blanks':
+        return (
+          <FillInBlanksGame 
+            text={stageData.text || ""}
+            blanks={stageData.blanks || {}}
+            wordBank={stageData.wordBank || []}
+            showWordBank={stageData.showWordBank !== false}
+            title={stageData.title}
+            sourceReference={stageData.sourceReference}
+            learningPopup={stageData.learningPopup}
+            onComplete={onComplete}
+          />
+        );
+        
+      case 'word_search':
+        return (
+          <WordSearchGame 
+            grid={stageData.grid || []}
+            words={stageData.words || []}
+            title={stageData.title}
+            timeLimit={stageData.timeLimit || 0}
+            sourceReference={stageData.sourceReference}
+            learningPopup={stageData.learningPopup}
+            onComplete={onComplete}
+          />
+        );
+        
+      case 'sorting':
+        return (
+          <SortingGame 
+            items={stageData.items || []}
+            sortType={stageData.sortType || "chronological"}
+            title={stageData.title}
+            sourceReference={stageData.sourceReference}
+            learningPopup={stageData.learningPopup}
+            onComplete={onComplete}
+          />
+        );
+        
+      case 'multi_stage':
+        // מטפל בשלבים מורכבים המכילים מספר אתגרים
+        console.log("Handling multi_stage with challenges:", stageData.challenges);
+        if (stageData.challenges && stageData.challenges.length > 0) {
+          const firstChallenge = stageData.challenges[0];
+          console.log("Rendering first challenge:", firstChallenge);
+          return renderStageContent(firstChallenge, onComplete);
+        }
+        console.warn("No challenges defined for multi_stage");
+        return (
+          <div className="text-center p-6 bg-amber-50 rounded-lg">
+            <p>שלב מרובה אתגרים אך לא הוגדרו אתגרים</p>
+            <Button 
+              onClick={() => onComplete(0)} 
+              className="mt-4"
+            >
+              המשך לשלב הבא
+            </Button>
+          </div>
+        );
       
-    case 'sorting':
-      return (
-        <SortingGame 
-          items={stageData.items || []}
-          sortType={stageData.sortType || "chronological"}
-          title={stageData.title}
-          onComplete={onComplete}
-        />
-      );
-      
-    case 'multi_stage':
-      // מטפל בשלבים מורכבים המכילים מספר אתגרים
-      if (stageData.challenges && stageData.challenges.length > 0) {
-        const firstChallenge = stageData.challenges[0];
-        return renderStageContent(firstChallenge, onComplete);
-      }
-      return (
-        <div className="text-center p-6 bg-amber-50 rounded-lg">
-          <p>שלב מרובה אתגרים אך לא הוגדרו אתגרים</p>
-          <Button 
-            onClick={() => onComplete(0)} 
-            className="mt-4"
-          >
-            המשך לשלב הבא
-          </Button>
-        </div>
-      );
-    
-    default:
-      return (
-        <div className="text-center p-6 bg-gray-50 rounded-lg">
-          <p>סוג שלב לא נתמך: {stageData.type}</p>
-          <Button 
-            onClick={() => onComplete(0)} 
-            className="mt-4"
-          >
-            המשך לשלב הבא
-          </Button>
-        </div>
-      );
+      default:
+        console.warn("Unsupported stage type:", stageData.type);
+        return (
+          <div className="text-center p-6 bg-gray-50 rounded-lg">
+            <p>סוג שלב לא נתמך: {stageData.type}</p>
+            <Button 
+              onClick={() => onComplete(0)} 
+              className="mt-4"
+            >
+              המשך לשלב הבא
+            </Button>
+          </div>
+        );
+    }
+  } catch (error) {
+    console.error("Error rendering stage content:", error);
+    return (
+      <div className="text-center p-6 bg-red-50 rounded-lg">
+        <p className="text-red-500 font-bold mb-4">שגיאה בהצגת השלב</p>
+        <p className="mb-4">{error.toString()}</p>
+        <Button 
+          onClick={() => onComplete(0)} 
+          className="mt-4"
+        >
+          המשך לשלב הבא
+        </Button>
+      </div>
+    );
   }
 }
