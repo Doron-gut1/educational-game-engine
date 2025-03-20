@@ -24,8 +24,6 @@ export function GameManager({
   onComplete,
   onReset
 }) {
-  console.log("GameManager component initialized with templateId:", templateId);
-  
   const { gameState, state, gameConfig } = useGameContext();
   const { currentStage, completedStages, progress, moveToNextStage } = useGameProgress();
   
@@ -35,27 +33,17 @@ export function GameManager({
   const [currentStageData, setCurrentStageData] = useState(null);
   const [error, setError] = useState(null);
   const [templateManager] = useState(() => new TemplateManager());
+  const [stageMoveFlag, setStageMoveFlag] = useState(false);
   
-  console.log("GameManager initial state:", { 
-    currentStage,
-    completedStages,
-    progress,
-    gameConfig
-  });
-
   // טעינת תבנית המשחק
   useEffect(() => {
-    console.log("GameManager: Loading template:", templateId);
-    
     async function loadTemplate() {
       try {
-        console.log("Calling templateManager.loadTemplate with:", templateId);
         const loadedTemplate = await templateManager.loadTemplate(templateId);
-        console.log("Template loaded successfully:", loadedTemplate);
         setTemplate(loadedTemplate);
         setError(null);
       } catch (error) {
-        console.error("Failed to load template:", error);
+        console.error("שגיאה בטעינת תבנית המשחק:", error);
         setError(`שגיאה בטעינת תבנית המשחק: ${error.message}`);
       }
     }
@@ -65,17 +53,12 @@ export function GameManager({
 
   // עדכון שלב נוכחי כאשר משתנה
   useEffect(() => {
-    console.log("GameManager: Current stage changed to:", currentStage);
-    console.log("GameManager: Game content:", gameConfig?.content);
-    
     if (!gameConfig?.content?.stages || !currentStage) {
-      console.warn("Missing gameConfig.content.stages or currentStage");
       return;
     }
 
     // בדיקה אם מדובר בשלב מבוא
     if (currentStage === 'intro') {
-      console.log("Setting stage to intro");
       setIsIntro(true);
       setIsOutro(false);
       setCurrentStageData(gameConfig.content.intro);
@@ -84,7 +67,6 @@ export function GameManager({
 
     // בדיקה אם מדובר בשלב סיום
     if (currentStage === 'outro') {
-      console.log("Setting stage to outro");
       setIsIntro(false);
       setIsOutro(true);
       setCurrentStageData(gameConfig.content.outro);
@@ -92,58 +74,69 @@ export function GameManager({
     }
 
     // מציאת נתוני השלב הנוכחי
-    console.log("Finding stage data for:", currentStage);
     setIsIntro(false);
     setIsOutro(false);
     const stageData = gameConfig.content.stages.find(stage => stage.id === currentStage);
     
     if (stageData) {
-      console.log("Found stage data:", stageData);
       setCurrentStageData(stageData);
     } else {
-      console.warn(`Stage data not found for ID: ${currentStage}`);
+      console.warn(`לא נמצאו נתונים לשלב: ${currentStage}`);
       setError(`לא נמצאו נתונים לשלב: ${currentStage}`);
     }
   }, [currentStage, gameConfig]);
 
   // טיפול בסיום שלב
   const handleStageComplete = (points) => {
-    console.log("Stage completed with points:", points);
+    // מניעת קריאות כפולות
+    if (stageMoveFlag) {
+      return;
+    }
+    
+    // מגדירים דגל שמונע קריאות כפולות
+    setStageMoveFlag(true);
     
     // אם זהו שלב המבוא, עוברים לשלב הראשון
     if (isIntro) {
-      console.log("Intro stage completed, moving to first stage");
       if (gameConfig?.content?.stages?.length > 0) {
         const firstStage = gameConfig.content.stages[0].id;
-        console.log("Moving to first stage:", firstStage);
         gameState.state.currentStage = firstStage;
         gameState.notifyListeners();
-      } else {
-        console.warn("No stages defined in gameConfig.content");
       }
+      
+      // איפוס הדגל לאחר זמן קצר
+      setTimeout(() => {
+        setStageMoveFlag(false);
+      }, 500);
       return;
     }
 
     // אם זהו שלב הסיום, מסיימים את המשחק
     if (isOutro) {
-      console.log("Outro stage completed, game finished with score:", state.score);
       if (onComplete) {
         onComplete(state.score);
       }
+      
+      // איפוס הדגל לאחר זמן קצר
+      setTimeout(() => {
+        setStageMoveFlag(false);
+      }, 500);
       return;
     }
 
     // קידום לשלב הבא
-    console.log("Moving to next stage");
     const hasNextStage = moveToNextStage();
-    console.log("Has next stage:", hasNextStage);
     
     // אם אין שלב נוסף, עוברים לסיום
     if (!hasNextStage && gameConfig?.content?.outro) {
-      console.log("No more stages, moving to outro");
       gameState.state.currentStage = 'outro';
       gameState.notifyListeners();
     }
+    
+    // איפוס הדגל לאחר זמן קצר
+    setTimeout(() => {
+      setStageMoveFlag(false);
+    }, 500);
   };
 
   // אם יש שגיאה, מציגים אותה
@@ -167,7 +160,6 @@ export function GameManager({
 
   // אם אין תבנית או תוכן, מציגים מסך טעינה
   if (!template || !gameConfig?.content) {
-    console.log("Template or content missing, showing loading screen");
     return (
       <div className="flex items-center justify-center min-h-[300px]">
         <div className="text-center">
@@ -184,11 +176,9 @@ export function GameManager({
 
   // הצגת מסך מבוא
   if (isIntro) {
-    console.log("Rendering intro screen");
     const introData = gameConfig.content.intro;
     
     if (!introData) {
-      console.warn("Intro data is missing");
       return (
         <div className="p-6 bg-yellow-50 rounded-lg shadow-lg text-center">
           <p className="mb-4">נתוני שלב המבוא חסרים</p>
@@ -220,6 +210,7 @@ export function GameManager({
           <Button 
             onClick={() => handleStageComplete(0)} 
             size="large"
+            disabled={stageMoveFlag}
           >
             {introData.actionButton?.text || 'התחל במשחק'}
           </Button>
@@ -230,11 +221,9 @@ export function GameManager({
 
   // הצגת מסך סיום
   if (isOutro) {
-    console.log("Rendering outro screen");
     const outroData = gameConfig.content.outro;
     
     if (!outroData) {
-      console.warn("Outro data is missing");
       return (
         <div className="p-6 bg-yellow-50 rounded-lg shadow-lg text-center">
           <p className="mb-4">נתוני שלב הסיום חסרים</p>
@@ -280,6 +269,7 @@ export function GameManager({
             <Button 
               onClick={() => handleStageComplete(0)} 
               size="large"
+              disabled={stageMoveFlag}
             >
               {outroData.actionButton.text}
             </Button>
@@ -300,7 +290,6 @@ export function GameManager({
 
   // הצגת שלב נוכחי
   if (!currentStageData) {
-    console.warn("Current stage data is missing");
     return (
       <div className="text-center p-6 bg-red-50 rounded-lg shadow-lg">
         <p className="text-red-500 font-bold mb-4">שלב לא נמצא</p>
@@ -316,8 +305,6 @@ export function GameManager({
       </div>
     );
   }
-  
-  console.log("Rendering current stage:", currentStageData);
 
   return (
     <div className="space-y-6">
@@ -370,8 +357,6 @@ export function GameManager({
  * @param {Function} onComplete - קולבק בסיום השלב
  */
 function renderStageContent(stageData, onComplete) {
-  console.log("Rendering stage content of type:", stageData.type);
-  
   try {
     switch (stageData.type) {
       case 'multi_choice':
@@ -451,13 +436,10 @@ function renderStageContent(stageData, onComplete) {
         
       case 'multi_stage':
         // מטפל בשלבים מורכבים המכילים מספר אתגרים
-        console.log("Handling multi_stage with challenges:", stageData.challenges);
         if (stageData.challenges && stageData.challenges.length > 0) {
           const firstChallenge = stageData.challenges[0];
-          console.log("Rendering first challenge:", firstChallenge);
           return renderStageContent(firstChallenge, onComplete);
         }
-        console.warn("No challenges defined for multi_stage");
         return (
           <div className="text-center p-6 bg-amber-50 rounded-lg">
             <p>שלב מרובה אתגרים אך לא הוגדרו אתגרים</p>
@@ -471,7 +453,6 @@ function renderStageContent(stageData, onComplete) {
         );
       
       default:
-        console.warn("Unsupported stage type:", stageData.type);
         return (
           <div className="text-center p-6 bg-gray-50 rounded-lg">
             <p>סוג שלב לא נתמך: {stageData.type}</p>
@@ -485,7 +466,7 @@ function renderStageContent(stageData, onComplete) {
         );
     }
   } catch (error) {
-    console.error("Error rendering stage content:", error);
+    console.error("שגיאה בהצגת השלב:", error);
     return (
       <div className="text-center p-6 bg-red-50 rounded-lg">
         <p className="text-red-500 font-bold mb-4">שגיאה בהצגת השלב</p>
