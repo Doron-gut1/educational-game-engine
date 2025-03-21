@@ -14,8 +14,5 @@ export * from './feedbackService';
 // שירותי אחסון
 export * from './storageService';
 
-// ניהול מצב מאובטח
-export * from './StateManager';
-
-// בקר שלבים
-export * from './StageController';
+// הערה: StateManager ו-StageController עברו לשכבת ליבה (core)
+// ייבוא דרך הקבצים בתיקיית core במקום
