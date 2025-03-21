@@ -4,9 +4,9 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';  // הוק חדש
-import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש
-import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש
-import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש
+import HintsPanel from '../../components/ui/HintsPanel';  // רכיב חדש - שינוי מהייבוא הקודם
+import SourceReference from '../../components/ui/SourceReference';  // רכיב חדש - שינוי מהייבוא הקודם
+import LearningPopup from '../../components/ui/LearningPopup';  // רכיב חדש - שינוי מהייבוא הקודם
 
 // ייבוא מערכת העיצוב החדשה
 import { Button } from '../../design-system/components';
