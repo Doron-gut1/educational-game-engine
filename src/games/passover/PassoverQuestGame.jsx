@@ -6,7 +6,10 @@ import { LoggerService } from '../../services';
 import { DevTools } from '../../components/dev/DevTools';
 import passoverQuestConfig from './config';
 import passoverCharacters from './characters';
-import passoverTheme from '../../themes/passoverTheme';
+
+// ייבוא מערכת העיצוב החדשה
+import { passoverTheme, useTheme } from '../../design-system';
+import { Button, GlassCard } from '../../design-system/components';
 
 /**
  * דף ראשי למשחק פסח - המסע לחירות
@@ -17,11 +20,13 @@ export default function PassoverQuestGame() {
   LoggerService.debug("Characters:", passoverCharacters);
   LoggerService.debug("Theme:", passoverTheme);
   
+  const theme = useTheme(); // שימוש בהוק החדש לקבלת התמה הנוכחית
   const [gameKey, setGameKey] = useState(Date.now()); // מפתח לאיפוס המשחק
   
   // Debug effect to track mount and render
   useEffect(() => {
     LoggerService.debug("PassoverQuestGame mounted/updated");
+    LoggerService.debug("Current theme:", theme);
     
     // Check all required objects and properties
     if (!passoverQuestConfig) {
@@ -35,11 +40,7 @@ export default function PassoverQuestGame() {
     if (!passoverCharacters) {
       LoggerService.error("passoverCharacters is missing");
     }
-    
-    if (!passoverTheme) {
-      LoggerService.error("passoverTheme is missing");
-    }
-  }, []);
+  }, [theme]);
   
   // איפוס המשחק
   const handleReset = () => {
@@ -87,20 +88,20 @@ export default function PassoverQuestGame() {
   } catch (error) {
     LoggerService.error("Error rendering PassoverQuestGame:", error);
     return (
-      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4" dir="rtl">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg">
-          <h1 className="text-2xl font-bold mb-4 text-red-600">שגיאה בטעינת המשחק</h1>
-          <p className="mb-4">אירעה שגיאה בעת טעינת משחק פסח:</p>
-          <pre className="bg-red-50 p-4 rounded-md overflow-auto text-sm mb-4">
+      <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-800 flex items-center justify-center p-4" dir="rtl">
+        <GlassCard variant="dark" className="p-8 max-w-lg">
+          <h1 className="text-2xl font-bold mb-4 text-red-400">שגיאה בטעינת המשחק</h1>
+          <p className="mb-4 text-white">אירעה שגיאה בעת טעינת משחק פסח:</p>
+          <pre className="bg-red-900/30 p-4 rounded-md overflow-auto text-sm mb-4 text-white">
             {error.toString()}
           </pre>
-          <button 
+          <Button 
+            variant="outline" 
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
           >
             נסה שוב
-          </button>
-        </div>
+          </Button>
+        </GlassCard>
       </div>
     );
   }
