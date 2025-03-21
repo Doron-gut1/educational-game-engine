@@ -15,30 +15,35 @@ export const ThemeContext = createContext({
  * @param {ReactNode} props.children - תוכן הרכיב
  * @param {Object|string} props.theme - תמה לשימוש (אובייקט או מזהה)
  */
-export const ThemeProvider = ({ children, theme = baseTheme }) => {
+export const ThemeProvider = ({ children, theme = 'base' }) => {
   // המרת מזהה תמה לאובייקט אם צריך
-  const getInitialTheme = () => {
-    if (typeof theme === 'string') {
-      return themes[theme] || baseTheme;
+  const getThemeObject = (themeInput) => {
+    // אם התמה היא מחרוזת, קבל את התמה המתאימה מהאובייקט themes
+    if (typeof themeInput === 'string') {
+      return themes[themeInput] || baseTheme;
     }
-    return theme || baseTheme;
+    // אם התמה היא אובייקט, החזר אותו
+    if (themeInput && typeof themeInput === 'object') {
+      return themeInput;
+    }
+    // ברירת מחדל היא התמה הבסיסית
+    return baseTheme;
   };
   
-  const [currentTheme, setCurrentTheme] = useState(getInitialTheme());
+  const [currentTheme, setCurrentTheme] = useState(() => getThemeObject(theme));
   
   // עדכון התמה כאשר ה-prop משתנה
   useEffect(() => {
-    if (theme !== currentTheme) {
-      if (typeof theme === 'string') {
-        setCurrentTheme(themes[theme] || currentTheme);
-      } else if (theme) {
-        setCurrentTheme(theme);
-      }
+    const newTheme = getThemeObject(theme);
+    if (newTheme !== currentTheme) {
+      setCurrentTheme(newTheme);
     }
   }, [theme, currentTheme]);
   
   // יצירת משתני CSS בהתאם לתמה
   useEffect(() => {
+    if (!currentTheme) return; // וידוא שיש תמה תקפה
+    
     const root = document.documentElement;
     
     // הוספת משתני CSS לצבעים
@@ -99,7 +104,7 @@ export const ThemeProvider = ({ children, theme = baseTheme }) => {
   
   // העברת התמה והאפשרות לשנות אותה
   const contextValue = {
-    theme: currentTheme,
+    theme: currentTheme || baseTheme, // תמיד יהיה ערך ברירת מחדל אם התמה ריקה
     setTheme: setCurrentTheme,
   };
   
