@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../design-system';
 
 /**
  * רכיב כרטיס - מסגרת עם עיצוב אחיד לתוכן
