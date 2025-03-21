@@ -1,4 +1,5 @@
 import { LoggerService } from './loggerService';
+import { themes } from '../design-system/themes';
 
 /**
  * שירות לטעינת תוכן משחק - גרסה משודרגת
@@ -85,23 +86,23 @@ export class ContentLoader {
   /**
    * טעינת הגדרות תמה
    * @param {string} gameId - מזהה המשחק
-   * @returns {Promise<Object>} - הגדרות התמה
+   * @returns {Promise<Object|string>} - הגדרות התמה או שם התמה
    */
   static async loadTheme(gameId) {
     try {
-      // ניסיון לטעון תמה ספציפית למשחק
-      const theme = await import(`../themes/${gameId}Theme.js`);
-      return theme.default || theme;
-    } catch (error) {
-      try {
-        // אם אין תמה ספציפית, משתמשים בתמה ברירת מחדל
-        LoggerService.info(`לא נמצאה תמה ספציפית ל-${gameId}, משתמש בתמה כללית`);
-        const defaultTheme = await import('../themes/defaultTheme.js');
-        return defaultTheme.default || defaultTheme;
-      } catch (e) {
-        LoggerService.error("שגיאה בטעינת תמה:", e);
-        throw e;
+      // בדיקה אם קיימת תמה מתאימה במערכת התמות החדשה
+      const themeName = gameId.toLowerCase();
+      if (themes[themeName]) {
+        LoggerService.info(`נמצאה תמה ${themeName} במערכת התמות החדשה`);
+        return themeName;
       }
+      
+      // במידה ולא נמצאה תמה ספציפית, החזר את התמה הבסיסית
+      LoggerService.info(`לא נמצאה תמה ספציפית ל-${gameId}, משתמש בתמה בסיסית`);
+      return "base";
+    } catch (error) {
+      LoggerService.error("שגיאה בטעינת תמה:", error);
+      return "base"; // ברירת מחדל במקרה של שגיאה
     }
   }
 
