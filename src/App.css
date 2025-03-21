@@ -1,1 +1,64 @@
-/* ניתן להוסיף כאן סגנונות ספציפיים לאפליקציה */
+/* סגנונות ואנימציות לאפליקציה */
+
+/* אנימציית הבהוב/ריצוד */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+/* אפקט כניסה יפה לדף */
+.app {
+  animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* צללית מיוחדת עם הילה */
+.game-card {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s ease;
+}
+
+.game-card:hover {
+  box-shadow: 0 15px 40px -10px rgba(245, 158, 11, 0.3);
+}
+
+/* אנימציית פעימה */
+@keyframes pulse-soft {
+  0% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 0.8; transform: scale(1); }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s infinite ease-in-out;
+}
+
+/* אנימציית הופעה הדרגתית */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.staggered-item:nth-child(1) { animation: fadeInUp 0.6s 0.1s both; }
+.staggered-item:nth-child(2) { animation: fadeInUp 0.6s 0.2s both; }
+.staggered-item:nth-child(3) { animation: fadeInUp 0.6s 0.3s both; }
+.staggered-item:nth-child(4) { animation: fadeInUp 0.6s 0.4s both; }
+.staggered-item:nth-child(5) { animation: fadeInUp 0.6s 0.5s both; }
+
+/* סגנונות מיוחדים לכפתורים */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+}
