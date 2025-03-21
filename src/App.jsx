@@ -1,14 +1,14 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
-import { ThemeProvider, passoverTheme } from './design-system';
 import { LoggerService } from './services';
 import './App.css';
 
+// ייבוא מערכת העיצוב החדשה
+import { ThemeProvider, passoverTheme } from './design-system';
+import { Button, ScrollCard, GlassCard } from './design-system/components';
+
 // Import game components
 import PassoverQuestGame from './games/passover/PassoverQuestGame.jsx';
-
-// Import design system components
-import { Button, GlassCard, ScrollCard } from './design-system';
 
 function App() {
   LoggerService.debug("App component initialized");
@@ -28,38 +28,42 @@ function App() {
   const renderGameSelector = () => {
     LoggerService.debug("Rendering game selector");
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center p-4" dir="rtl">
-        <ScrollCard variant="primary" className="max-w-4xl w-full p-0">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold text-blue-800 mb-4 text-center">מנוע משחק מודולרי</h1>
-            <p className="text-gray-600 mb-6 text-center">מערכת ליצירת משחקים חינוכיים אינטראקטיביים</p>
-            
-            <GlassCard variant="primary" className="mb-6">
-              <h2 className="text-xl font-bold text-blue-700 mb-4">בחר משחק להפעלה:</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button 
-                  onClick={() => handleGameSelect('passover')}
-                  className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border-2 border-blue-200 hover:border-blue-400"
-                >
-                  <h3 className="text-lg font-bold mb-2">המסע לחירות</h3>
-                  <p className="text-gray-600">משחק פסח אינטראקטיבי על מסע יציאת מצרים</p>
-                </button>
-                
-                <button 
-                  onClick={() => handleGameSelect('tubishvat')}
-                  className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border-2 border-green-200 hover:border-green-400 opacity-50 cursor-not-allowed"
-                >
-                  <h3 className="text-lg font-bold mb-2">חגיגת ט"ו בשבט</h3>
-                  <p className="text-gray-600">משחק אינטראקטיבי לחג האילנות (בקרוב)</p>
-                </button>
+      <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-50 flex items-center justify-center p-4" dir="rtl">
+        <GlassCard className="max-w-4xl w-full p-8">
+          <h1 className="text-4xl font-bold text-blue-800 mb-4 text-center">מסע הדעת</h1>
+          <p className="text-gray-600 mb-8 text-center text-lg">מערכת ליצירת משחקים חינוכיים אינטראקטיביים</p>
+          
+          <ScrollCard variant="primary" animated={true} className="mb-6">
+            <h2 className="text-2xl font-bold text-blue-700 mb-4">בחר משחק להפעלה:</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div 
+                onClick={() => handleGameSelect('passover')}
+                className="p-6 bg-white/80 rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 border-blue-200 hover:border-blue-400 transform hover:scale-105"
+              >
+                <h3 className="text-xl font-bold mb-3 text-blue-800">המסע לחירות</h3>
+                <p className="text-gray-700">משחק פסח אינטראקטיבי על מסע יציאת מצרים</p>
               </div>
-            </GlassCard>
-            
-            <div className="p-4 bg-blue-50 rounded-lg text-center">
-              <p className="text-gray-600">בחר משחק כדי להתחיל</p>
+              
+              <div 
+                className="p-6 bg-white/60 rounded-lg shadow hover:shadow-md transition-all border-2 border-gray-200 opacity-60 cursor-not-allowed"
+              >
+                <h3 className="text-xl font-bold mb-3 text-gray-500">חגיגת ט"ו בשבט</h3>
+                <p className="text-gray-500">יהיה זמין בקרוב</p>
+              </div>
             </div>
+          </ScrollCard>
+          
+          <div className="flex justify-center mt-4">
+            <Button 
+              variant="primary" 
+              size="large"
+              onClick={() => handleGameSelect('passover')}
+              className="mx-2"
+            >
+              התחל את המסע
+            </Button>
           </div>
-        </ScrollCard>
+        </GlassCard>
       </div>
     );
   };
@@ -76,15 +80,15 @@ function App() {
           LoggerService.error("Error rendering PassoverQuestGame:", error);
           return (
             <div className="min-h-screen bg-red-50 flex items-center justify-center p-4" dir="rtl">
-              <GlassCard variant="default" className="max-w-lg">
-                <h1 className="text-2xl font-bold mb-4 text-red-600">שגיאה בטעינת המשחק</h1>
-                <p className="mb-4">אירעה שגיאה בעת טעינת משחק הפסח</p>
-                <pre className="bg-red-50 p-4 rounded-md overflow-auto text-sm mb-4">
+              <GlassCard variant="dark" className="p-8 max-w-lg">
+                <h1 className="text-2xl font-bold mb-4 text-red-500">שגיאה בטעינת המשחק</h1>
+                <p className="mb-4 text-white">אירעה שגיאה בעת טעינת משחק הפסח</p>
+                <pre className="bg-red-900/30 p-4 rounded-md overflow-auto text-sm mb-4 text-white">
                   {error.toString()}
                 </pre>
                 <Button 
+                  variant="outline" 
                   onClick={() => setSelectedGame(null)}
-                  variant="primary"
                 >
                   חזרה לבחירת משחק
                 </Button>
@@ -92,28 +96,13 @@ function App() {
             </div>
           );
         }
-      case 'tubishvat':
-        // הודעה שמשחק ט"ו בשבט עדיין לא זמין
-        return (
-          <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 flex items-center justify-center p-4" dir="rtl">
-            <GlassCard variant="default" className="max-w-lg">
-              <h1 className="text-2xl font-bold mb-4">חגיגת ט"ו בשבט</h1>
-              <p className="mb-4">המשחק יהיה זמין בקרוב!</p>
-              <Button 
-                onClick={() => setSelectedGame(null)}
-                variant="primary"
-              >
-                חזרה לבחירת משחק
-              </Button>
-            </GlassCard>
-          </div>
-        );
       default:
         return renderGameSelector();
     }
   };
 
   LoggerService.debug("App render");
+  // שימוש ב-ThemeProvider החדש עם תמת פסח
   return (
     <ThemeProvider theme={selectedGame === 'passover' ? passoverTheme : 'base'}>
       <div className="app">
