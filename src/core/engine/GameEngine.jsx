@@ -3,6 +3,8 @@ import { GameProvider } from '../../contexts/GameContext';
 import { ThemeProvider } from '../../contexts/ThemeContext';
 import { defaultTheme } from '../../themes/defaultTheme';
 import { ContentLoader } from '../../services/contentLoader';
+import { AssetManager } from '../../services/assetManager';
+import { LoggerService } from '../../services/loggerService';
 
 /**
  * רכיב מנוע המשחק - אחראי לטעינת המשחק והגדרותיו
@@ -31,11 +33,15 @@ export function GameEngine({
       setError(null);
 
       try {
+        // טעינה מוקדמת של נכסים חיוניים למשחק
+        LoggerService.info(`[GameEngine] Preloading essential assets for ${gameId}`);
+        await AssetManager.preloadEssentialAssets(gameId);
+        
         // טעינת קונפיגורציה
         const config = await ContentLoader.loadGameConfig(gameId);
         setGameConfig(config);
 
-        // טעינת תוכן המשחק
+        // טעינת תוכן המשחק - עם נרמול נתיבים אוטומטי
         const content = await ContentLoader.loadGameContent(gameId);
         setGameContent(content);
 
@@ -45,7 +51,7 @@ export function GameEngine({
           setCharacters(chars);
         } catch (charError) {
           // דמויות הן אופציונליות, כך שאם הטעינה נכשלת - לא קריטי
-          console.warn('Could not load characters:', charError);
+          LoggerService.warn('[GameEngine] Could not load characters:', charError);
           setCharacters({});
         }
 
@@ -56,7 +62,7 @@ export function GameEngine({
             const themeData = themeModule.default || themeModule;
             setTheme(themeData);
           } catch (themeError) {
-            console.warn(`Could not load theme ${config.theme}:`, themeError);
+            LoggerService.warn(`[GameEngine] Could not load theme ${config.theme}:`, themeError);
             // נשאר עם ערכת ברירת מחדל
           }
         }
@@ -67,7 +73,7 @@ export function GameEngine({
         }
 
       } catch (err) {
-        console.error('Error loading game:', err);
+        LoggerService.error('[GameEngine] Error loading game:', err);
         setError(err.message || 'Failed to load game');
         if (onError) {
           onError(err);
