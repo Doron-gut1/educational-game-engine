@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useGameContext } from '../contexts/GameContext';
 import { useGameProgress } from '../hooks/useGameProgress';
-import { Button } from './ui/Button';
 import { ProgressBar } from './ui/ProgressBar';
 import { TemplateManager } from '../core/engine/TemplateManager';
 import { IntroCard } from './layout/IntroCard';
-import { Card } from './ui/Card';
 import { LoggerService } from '../services';
+
+// ייבוא מערכת העיצוב החדשה
+import { Button, ScrollCard as Card } from '../design-system/components';
 
 // מודולי משחק
 import { MultiChoiceGame } from '../modules/multiChoice/MultiChoiceGame';
