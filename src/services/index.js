@@ -8,6 +8,9 @@ export * from './loggerService';
 // טעינת תוכן
 export * from './contentLoader';
 
+// ניהול נכסים (חדש)
+export * from './assetManager';
+
 // שירותי משוב
 export * from './feedbackService';
 
