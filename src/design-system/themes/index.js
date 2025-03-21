@@ -1,9 +1,12 @@
 /**
  * ייצוא מרוכז של כל התמות במערכת
  */
-export { baseTheme } from './baseTheme';
-export { passoverTheme } from './passoverTheme';
-export { tuBishvatTheme } from './tuBishvatTheme';
+import { baseTheme } from './baseTheme';
+import { passoverTheme } from './passoverTheme';
+import { tuBishvatTheme } from './tuBishvatTheme';
+
+// ייצוא התמות
+export { baseTheme, passoverTheme, tuBishvatTheme };
 
 // פונקציית עזר למיזוג תמות בסיסיות עם תוספות
 export const mergeTheme = (baseTheme, overrides) => {
