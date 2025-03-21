@@ -1,98 +1,84 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { GameState } from '../core/engine/GameState';
-import { StateManager, StageController, LoggerService } from '../services';
+import { LoggerService } from '../services/loggerService';
+import { StateManager } from '../core/StateManager';
+import { StageController } from '../core/StageController';
 
 // קונטקסט המשחק
 export const GameContext = createContext(null);
 
-// ספק קונטקסט המשחק
-export function GameProvider({ children, gameConfig }) {
-  // יצירת מופע GameState לאחורה-תאימות
-  const [gameState] = useState(() => new GameState(gameConfig));
-  const [state, setState] = useState(gameState.state);
+/**
+ * ספק קונטקסט המשחק - מספק גישה למצב המשחק ופונקציות שליטה
+ * גרסה מעודכנת שמשתמשת אך ורק בארכיטקטורה החדשה
+ */
+export function GameProvider({ children, gameConfig, initialState = {} }) {
+  LoggerService.debug("[GameContext] Initializing GameProvider");
   
   // יצירת מופעים של השירותים החדשים
-  const [stateManager] = useState(() => new StateManager(gameState.state));
-  const [stageController] = useState(() => new StageController(stateManager));
+  const [stateManager] = useState(() => {
+    LoggerService.debug("[GameContext] Creating StateManager");
+    return new StateManager(initialState);
+  });
   
-  // דגל המציין אם משתמשים במנגנון החדש או הישן
-  // מעבר למנגנון החדש
-  const useNewServices = true;
+  const [stageController] = useState(() => {
+    LoggerService.debug("[GameContext] Creating StageController");
+    return new StageController(stateManager);
+  });
   
-  LoggerService.info(`[GameContext] Using ${useNewServices ? 'new' : 'legacy'} state management system`);
+  // מצב המשחק העדכני - מופץ למאזינים
+  const [state, setState] = useState(stateManager.getState());
   
-  // עדכון מצב בעת שינויים - מנגנון ישן
+  // הרשמה לשינויים במצב המשחק
   useEffect(() => {
-    if (!useNewServices) {
-      LoggerService.debug('[GameContext] Subscribing to legacy GameState');
-      const unsubscribe = gameState.subscribe(newState => {
-        setState(newState);
-        
-        // עדכון StateManager החדש במצב העדכני (סנכרון)
-        if (useNewServices) {
-          stateManager.setState(newState, null);
-        }
-      });
-      
-      return unsubscribe;
-    }
-  }, [gameState, stateManager, useNewServices]);
-  
-  // עדכון מצב בעת שינויים - מנגנון חדש
-  useEffect(() => {
-    if (useNewServices) {
-      LoggerService.debug('[GameContext] Subscribing to new StateManager');
-      const unsubscribe = stateManager.subscribe('gameContext', newState => {
-        setState(newState);
-        
-        // עדכון מנגנון ישן במצב העדכני (סנכרון)
-        // כדי לשמור על תאימות לאחור
-        Object.assign(gameState.state, newState);
-        gameState.notifyListeners();
-      });
-      
-      return unsubscribe;
-    }
-  }, [stateManager, gameState, useNewServices]);
-  
-  useEffect(() => {
-    LoggerService.info('[GameContext] Initializing game');
+    LoggerService.debug('[GameContext] Subscribing to StateManager');
     
-    // אתחול המשחק בטעינה
-    if (useNewServices) {
-      // וידוא שיש תצורת משחק תקינה
-      if (!gameConfig) {
-        LoggerService.warn('[GameContext] No game config provided');
-        return;
-      }
-      
-      // אתחול באמצעות השירותים החדשים
-      stateManager.resetState({
-        ...gameState.state,
-        gameConfig, // שמירת תצורת המשחק במצב
-        currentStage: gameConfig?.stages?.[0]?.id || null,
-        completedStages: [],
-        score: 0,
-        progress: 0,
-        startTime: new Date(),
-        endTime: null
-      });
-      
-      LoggerService.debug('[GameContext] State initialized with new services');
-    } else {
-      // אתחול באמצעות המנגנון הישן
-      gameState.initState();
-      LoggerService.debug('[GameContext] State initialized with legacy system');
+    const unsubscribe = stateManager.subscribe('gameContext', newState => {
+      setState(newState);
+    });
+    
+    return () => {
+      LoggerService.debug('[GameContext] Unsubscribing from StateManager');
+      unsubscribe();
+    };
+  }, [stateManager]);
+  
+  // אתחול המשחק בטעינה
+  useEffect(() => {
+    LoggerService.info('[GameContext] Initializing game state');
+    
+    // וידוא שיש תצורת משחק תקינה
+    if (!gameConfig) {
+      LoggerService.warn('[GameContext] No game config provided');
+      return;
     }
+    
+    // אתחול המצב
+    stateManager.resetState({
+      gameConfig, // שמירת תצורת המשחק במצב
+      currentStage: gameConfig?.stages?.[0]?.id || null,
+      completedStages: [],
+      score: 0,
+      progress: 0,
+      difficulty: gameConfig?.difficulty || 'medium',
+      startTime: new Date(),
+      endTime: null,
+      ...initialState // שילוב מצב התחלתי אם הועבר
+    });
+    
+    LoggerService.debug('[GameContext] State initialized successfully');
     
     // שמירת מצב בעת עזיבת העמוד
     const handleBeforeUnload = () => {
       LoggerService.debug('[GameContext] Saving state before unload');
       
-      if (useNewServices) {
-        // TODO: יש להוסיף מנגנון שמירה לשירותים החדשים
-      } else {
-        gameState.saveState();
+      // יישום שמירה - יש להוסיף מנגנון שמירה
+      try {
+        const currentState = stateManager.getState();
+        localStorage.setItem(
+          `game_${gameConfig.id}_state`,
+          JSON.stringify(currentState)
+        );
+      } catch (e) {
+        LoggerService.error('Failed to save game state:', e);
       }
     };
     
@@ -100,91 +86,75 @@ export function GameProvider({ children, gameConfig }) {
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      
-      if (useNewServices) {
-        stageController.dispose();
-      }
     };
-  }, [gameState, stateManager, stageController, gameConfig, useNewServices]);
+  }, [stateManager, gameConfig, initialState]);
   
-  // הוספת פונקציות עזר עם תמיכה בשני המנגנונים
+  // פונקציות עזר שחושפות את פונקציונליות המנגנון
+  
+  // מעבר לשלב אחר
   const moveToStage = (stageId) => {
     LoggerService.info(`[GameContext] Moving to stage: ${stageId}`);
-    
-    if (useNewServices) {
-      return stageController.transitionToStage(stageId);
-    } else {
-      // מימוש פשוט לניסיון להעביר לשלב
-      gameState.state.currentStage = stageId;
-      gameState.notifyListeners();
-      return true;
-    }
+    return stageController.transitionToStage(stageId);
   };
   
+  // סימון שלב כהושלם והוספת ניקוד
   const completeStage = (stageId, score = 0) => {
     LoggerService.info(`[GameContext] Completing stage: ${stageId} with score: ${score}`);
-    
-    if (useNewServices) {
-      return stageController.completeStage(stageId, score);
-    } else {
-      // התאמה למנגנון הישן
-      if (!gameState.state.completedStages.includes(stageId)) {
-        gameState.state.completedStages.push(stageId);
-      }
-      gameState.addScore(score);
-      gameState.notifyListeners();
-      return true;
-    }
+    return stageController.completeStage(stageId, score);
   };
   
+  // איפוס המשחק
   const resetGame = () => {
     LoggerService.info('[GameContext] Resetting game');
-    
-    if (useNewServices) {
-      stateManager.resetState({
-        currentStage: gameConfig?.stages?.[0]?.id || null,
-        completedStages: [],
-        score: 0,
-        progress: 0,
-        startTime: new Date(),
-        endTime: null,
-        gameConfig // שמירת תצורת המשחק
-      });
-    } else {
-      gameState.initState();
-    }
+    stateManager.resetState({
+      gameConfig,
+      currentStage: gameConfig?.stages?.[0]?.id || null,
+      completedStages: [],
+      score: 0,
+      progress: 0,
+      startTime: new Date(),
+      endTime: null,
+      difficulty: gameConfig?.difficulty || 'medium'
+    });
   };
   
   // פונקציית עזר להוספת ניקוד
   const addScore = (points) => {
     LoggerService.info(`[GameContext] Adding ${points} points to score`);
-    
-    if (useNewServices) {
-      stateManager.setState({
-        score: (state.score || 0) + points
-      });
-    } else {
-      gameState.addScore(points);
-    }
+    stateManager.setState({
+      score: (state.score || 0) + points
+    });
   };
   
   // פונקציית עזר לשינוי רמת קושי
   const setDifficulty = (difficulty) => {
     LoggerService.info(`[GameContext] Setting difficulty to: ${difficulty}`);
+    stateManager.setState({ difficulty });
+  };
+  
+  // חזרה לשלב הקודם (אם אפשר)
+  const goBack = () => {
+    LoggerService.info('[GameContext] Attempting to go back to previous stage');
+    return stageController.goBack();
+  };
+  
+  // חישוב התקדמות
+  const calculateProgress = () => {
+    if (!gameConfig?.stages?.length) return 0;
     
-    if (useNewServices) {
-      stateManager.setState({ difficulty });
-    } else {
-      gameState.setDifficulty(difficulty);
-    }
+    const totalStages = gameConfig.stages.length;
+    const completedCount = state.completedStages?.length || 0;
+    const progress = Math.floor((completedCount / totalStages) * 100);
+    
+    stateManager.setState({ progress });
+    return progress;
   };
   
   return (
     <GameContext.Provider value={{ 
       state, 
-      gameState,
       gameConfig,
-      // חשיפת שירותים חדשים
+      // חשיפת שירותים 
       stateManager,
       stageController,
       // פונקציות עזר
@@ -192,7 +162,9 @@ export function GameProvider({ children, gameConfig }) {
       completeStage,
       resetGame,
       addScore,
-      setDifficulty
+      setDifficulty,
+      goBack,
+      calculateProgress
     }}>
       {children}
     </GameContext.Provider>
