@@ -32,8 +32,8 @@ export class AssetManager {
     try {
       // אם לא הועברה רשימה ספציפית, ניתן לקבוע קבוצות ברירת מחדל
       const defaultAssets = [
-        { type: 'backgrounds', path: 'main_background.jpg' },
         { type: 'backgrounds', path: 'scroll_background.jpg' },
+        { type: 'backgrounds', path: 'intro_background.jpg' }
       ];
       
       const assetsToLoad = essentialAssets.length ? essentialAssets : defaultAssets;
@@ -74,8 +74,7 @@ export class AssetManager {
         };
         
         audio.onerror = (error) => {
-          LoggerService.error(`[AssetManager] שגיאה בטעינת אודיו ${assetPath}:`, error);
-          reject(new Error(`שגיאה בטעינת אודיו ${assetPath}`));
+          reject(new Error(`[AssetManager] שגיאה בטעינת אודיו ${assetPath}: ${error}`));
         };
         
         // התחלת טעינה
@@ -91,8 +90,7 @@ export class AssetManager {
         };
         
         img.onerror = (error) => {
-          LoggerService.error(`[AssetManager] שגיאה בטעינת תמונה ${assetPath}:`, error);
-          reject(new Error(`שגיאה בטעינת תמונה ${assetPath}`));
+          reject(new Error(`[AssetManager] שגיאה בטעינת תמונה ${assetPath}: ${error}`));
         };
       }
     });
