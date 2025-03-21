@@ -1,6 +1,5 @@
 import React from 'react';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { Button, ScrollCard } from '../../design-system/components';
 import { Character } from '../characters/Character';
 
 /**
@@ -19,17 +18,17 @@ export function IntroCard({
 }) {
   if (!introData) {
     return (
-      <Card className="p-6 bg-yellow-50 text-center">
+      <ScrollCard className="p-6 bg-yellow-50 text-center">
         <p className="mb-4">נתוני שלב המבוא חסרים</p>
         <Button onClick={onStart}>
           המשך למשחק
         </Button>
-      </Card>
+      </ScrollCard>
     );
   }
   
   return (
-    <Card className="max-w-4xl mx-auto overflow-hidden">
+    <ScrollCard className="max-w-4xl mx-auto overflow-hidden">
       {/* כותרת עם רקע */}
       <div 
         className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white relative"
@@ -115,6 +114,6 @@ export function IntroCard({
           </Button>
         </div>
       </div>
-    </Card>
+    </ScrollCard>
   );
 }
