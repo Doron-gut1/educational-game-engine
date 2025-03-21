@@ -1,0 +1,36 @@
+{
+  "intro": {
+    "title": "בדיקת נכסים",
+    "background": "test_background.jpg",
+    "dialogue": [
+      {
+        "character": "test_character",
+        "text": "טקסט בדיקה עם נתיבי נכסים בפורמטים שונים"
+      }
+    ]
+  },
+  "stages": [
+    {
+      "id": "stage1",
+      "title": "שלב בדיקת תמונות",
+      "background": "backgrounds/stage_background.jpg",
+      "image": "images/test_image.png",
+      "characterImage": "characters/test_character.png",
+      "itemImage": "items/test_item.jpg",
+      "absolutePath": "/assets/games/test-assets/backgrounds/absolute_path.jpg",
+      "externalUrl": "https://example.com/external-image.jpg"
+    },
+    {
+      "id": "stage2",
+      "title": "שלב בדיקת אודיו",
+      "background": "test_background2.jpg",
+      "audio": "test_audio.mp3",
+      "soundEffect": "effects/test_sound.wav",
+      "music": "audio/test_music.mp3"
+    }
+  ],
+  "outro": {
+    "title": "סיום בדיקה",
+    "background": "outro_background.jpg"
+  }
+}
