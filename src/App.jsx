@@ -4,7 +4,7 @@ import { LoggerService } from './services';
 import './App.css';
 
 // ייבוא מערכת העיצוב החדשה
-import { ThemeProvider, passoverTheme } from './design-system';
+import { ThemeProvider } from './design-system';
 import { Button, ScrollCard, GlassCard } from './design-system/components';
 
 // Import game components
@@ -14,10 +14,18 @@ function App() {
   LoggerService.debug("App component initialized");
   
   const [selectedGame, setSelectedGame] = useState(null);
+  const [currentTheme, setCurrentTheme] = useState('base');
 
   // Debug effect to track initial render and state changes
   useEffect(() => {
     LoggerService.debug("App mounted/updated. Selected game:", selectedGame);
+    
+    // עדכון התמה בהתאם למשחק שנבחר
+    if (selectedGame === 'passover') {
+      setCurrentTheme('passover');
+    } else {
+      setCurrentTheme('base');
+    }
   }, [selectedGame]);
 
   const handleGameSelect = (gameId) => {
@@ -47,7 +55,7 @@ function App() {
               <div 
                 className="p-6 bg-white/60 rounded-lg shadow hover:shadow-md transition-all border-2 border-gray-200 opacity-60 cursor-not-allowed"
               >
-                <h3 className="text-xl font-bold mb-3 text-gray-500">חגיגת ט"ו בשבט</h3>
+                <h3 className="text-xl font-bold mb-3 text-gray-500">חגיגת ט\"ו בשבט</h3>
                 <p className="text-gray-500">יהיה זמין בקרוב</p>
               </div>
             </div>
@@ -101,10 +109,11 @@ function App() {
     }
   };
 
-  LoggerService.debug("App render");
-  // שימוש ב-ThemeProvider החדש עם תמת פסח
+  LoggerService.debug("App render with theme:", currentTheme);
+  
+  // שימוש ב-ThemeProvider החדש עם תמה מתאימה למשחק
   return (
-    <ThemeProvider theme={selectedGame === 'passover' ? passoverTheme : 'base'}>
+    <ThemeProvider theme={currentTheme}>
       <div className="app">
         {renderSelectedGame()}
       </div>
