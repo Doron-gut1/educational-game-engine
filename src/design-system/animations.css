@@ -1,0 +1,93 @@
+/* src/design-system/animations.css */
+/* אנימציות בסיסיות למערכת העיצוב */
+
+/* אנימציית פתיחת מגילה */
+@keyframes unfold {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--full-height);
+    opacity: 1;
+  }
+}
+
+.scroll-unfold {
+  animation: unfold 1s ease-out forwards;
+}
+
+/* אנימציית עלייה (מלמטה למעלה) */
+@keyframes rise {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.rise-animation {
+  animation: rise 0.5s ease-out forwards;
+}
+
+/* אנימציית הופעה */
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.appear-animation {
+  animation: appear 0.4s ease-in forwards;
+}
+
+/* אנימציית פעימה (למשיכת תשומת לב) */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pulse-effect {
+  animation: pulse 1.5s infinite;
+}
+
+/* אנימציית זוהר (לתשובה נכונה) */
+@keyframes glow {
+  0% { box-shadow: 0 0 0px 0px rgba(246, 224, 94, 0); }
+  50% { box-shadow: 0 0 15px 7px rgba(246, 224, 94, 0.8); }
+  100% { box-shadow: 0 0 10px 5px rgba(246, 224, 94, 0.6); }
+}
+
+.glow-effect {
+  animation: glow 1s ease-in-out;
+}
+
+/* אנימציית רעידה (לתשובה שגויה) */
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+  40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+
+.shake-effect {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* אנימציית חגיגה (לסיום שלב) */
+@keyframes celebrate {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.1); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.celebrate-effect {
+  animation: celebrate 1s ease-in-out;
+}
