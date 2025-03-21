@@ -1,66 +1,83 @@
+// src/components/ui/SourceReference.jsx
 import React, { useState } from 'react';
-import { Card } from './Card';
+import PropTypes from 'prop-types';
+import { useTheme } from '../../design-system';
+import { Button, ScrollCard } from '../../design-system/components';
 
 /**
- * רכיב להצגת מקורות וציטוטים
- * @param {Object} props - פרופס הרכיב
- * @param {string} props.source - הציטוט או המקור העיקרי
- * @param {string} props.reference - הרחבה או הסבר על המקור
- * @param {boolean} props.expandable - האם המקור ניתן להרחבה
- * @param {boolean} props.initiallyExpanded - האם להציג את ההרחבה מלכתחילה
- * @param {string} props.className - קלאסים נוספים
+ * רכיב להצגת מקורות ומידע מורחב
  */
-export function SourceReference({
-  source,
-  reference,
-  expandable = true,
-  initiallyExpanded = false,
+const SourceReference = ({ 
+  title = "מקור",
+  source = "",
+  explanation = "",
   className = ""
-}) {
-  const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const theme = useTheme();
   
-  if (!source) return null;
+  // אם אין מקור, לא מציגים את הרכיב
+  if (!source && !explanation) {
+    return null;
+  }
   
   return (
-    <Card 
-      variant="translucent" 
-      className={`p-3 border-r-4 border-amber-500 ${className}`}
-    >
-      <div>
-        <div className="text-sm text-amber-800 font-semibold mb-1">מקור:</div>
-        <p className="text-gray-800 text-right leading-relaxed">{source}</p>
+    <div className={`source-reference mt-4 ${className}`}>
+      <div 
+        className="bg-blue-50 border-r-4 border-blue-500 p-4 rounded-lg cursor-pointer transition-all hover:bg-blue-100"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex justify-between items-center">
+          <h3 className="text-blue-800 font-bold flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+            </svg>
+            {title}
+          </h3>
+          <Button 
+            variant="text" 
+            size="small"
+            className="text-blue-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
+          >
+            {expanded ? 'הסתר' : 'הרחב'}
+          </Button>
+        </div>
         
-        {reference && expandable && (
-          <div className="mt-2">
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-sm text-amber-600 hover:text-amber-800 flex items-center"
-            >
-              {isExpanded ? 'הסתר הרחבה' : 'הרחב מקור'}
-              <svg 
-                className={`w-4 h-4 mr-1 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`} 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {isExpanded && (
-              <div className="mt-2 p-3 bg-amber-50 rounded-md text-gray-800 leading-relaxed">
-                {reference}
-              </div>
-            )}
-          </div>
-        )}
-        
-        {reference && !expandable && (
-          <div className="mt-2 p-3 bg-amber-50 rounded-md text-gray-800 leading-relaxed">
-            {reference}
-          </div>
+        {!expanded && (
+          <p className="text-blue-900 text-sm mt-1 line-clamp-1">{source}</p>
         )}
       </div>
-    </Card>
+      
+      {expanded && (
+        <ScrollCard variant="transparent" className="mt-2 p-4 border border-blue-200">
+          {source && (
+            <div className="mb-4">
+              <h4 className="font-bold text-blue-700 mb-2">המקור:</h4>
+              <p className="text-blue-900 text-lg font-alef leading-relaxed">{source}</p>
+            </div>
+          )}
+          
+          {explanation && (
+            <div>
+              <h4 className="font-bold text-blue-700 mb-2">הסבר:</h4>
+              <p className="text-blue-800">{explanation}</p>
+            </div>
+          )}
+        </ScrollCard>
+      )}
+    </div>
   );
-}
+};
+
+SourceReference.propTypes = {
+  title: PropTypes.string,
+  source: PropTypes.string,
+  explanation: PropTypes.string,
+  className: PropTypes.string
+};
+
+export default SourceReference;
