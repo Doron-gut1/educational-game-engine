@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { WordGrid } from './WordGrid';
 import { WordList } from './WordList';
 import { ProgressBar } from '../../components/ui/ProgressBar';
-import { Button } from '../../components/ui/Button';
+import { Button } from '../../design-system/components';
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useTimer } from '../../hooks/useTimer';
