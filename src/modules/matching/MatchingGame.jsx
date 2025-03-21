@@ -4,9 +4,9 @@ import { MatchCard } from './MatchCard';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
-import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש - src/components/ui/HintsPanel.jsx
-import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש - src/components/ui/SourceReference.jsx
-import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש - src/components/ui/LearningPopup.jsx
+import HintsPanel from '../../components/ui/HintsPanel';  // רכיב חדש - תיקון אופן הייבוא
+import SourceReference from '../../components/ui/SourceReference';  // רכיב חדש - תיקון אופן הייבוא
+import LearningPopup from '../../components/ui/LearningPopup';  // רכיב חדש - תיקון אופן הייבוא
 
 // ייבוא מערכת העיצוב החדשה
 import { Button } from '../../design-system/components';
