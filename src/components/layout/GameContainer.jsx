@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { GameProvider } from '../../contexts/GameContext';
-import { useTheme } from '../../hooks/useTheme';
+import { ThemeProvider } from '../../design-system';
 import { ContentLoader } from '../../services/contentLoader';
 import { LoggerService } from '../../services/loggerService';
 
@@ -31,9 +31,6 @@ export function GameContainer({
   const [loadedConfig, setLoadedConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Use the theme from context or theme override
-  const theme = themeOverride || useTheme();
   
   // טעינת תוכן המשחק - פעם אחת בלבד
   useEffect(() => {
@@ -105,11 +102,11 @@ export function GameContainer({
     }
     
     // Check if theme exists
-    if (!theme) {
-      LoggerService.error("Theme is missing");
+    if (!themeOverride) {
+      LoggerService.warn("Theme override is missing, will use default theme");
     }
     
-  }, [loadedConfig]);
+  }, [loadedConfig, themeOverride]);
   
   // הצגת טעינה
   if (isLoading) {
@@ -144,36 +141,26 @@ export function GameContainer({
     );
   }
   
-  // בדיקה שיש תמה
-  if (!theme) {
-    LoggerService.error("Missing theme in GameContainer");
-    return (
-      <div className="p-4 bg-red-100 text-red-700 rounded-lg">
-        שגיאה: לא נמצאה ערכת עיצוב (theme)
-      </div>
-    );
-  }
-  
   const configToUse = loadedConfig || gameConfig;
+  const themeToUse = themeOverride || 'base'; // שימוש ב-base כברירת מחדל אם אין theme
   
   LoggerService.debug("GameContainer rendering with GameProvider");
   try {
     return (
-      <GameProvider 
-        gameConfig={configToUse}
-        initialState={initialState}
-      >
-        <div 
-          className={`
-            min-h-screen ${theme.gradients?.background || 'bg-gray-100'}
-            flex flex-col ${className || ''}
-          `}
-          dir="rtl"
-          {...props}
+      <ThemeProvider theme={themeToUse}>
+        <GameProvider 
+          gameConfig={configToUse}
+          initialState={initialState}
         >
-          {children}
-        </div>
-      </GameProvider>
+          <div 
+            className={`min-h-screen flex flex-col ${className || ''}`}
+            dir="rtl"
+            {...props}
+          >
+            {children}
+          </div>
+        </GameProvider>
+      </ThemeProvider>
     );
   } catch (error) {
     LoggerService.error("Error in GameContainer render:", error);
