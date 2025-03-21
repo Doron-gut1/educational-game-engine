@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { GameProvider } from '../../contexts/GameContext';
-import { ThemeProvider } from '../../design-system';
 import { ContentLoader } from '../../services/contentLoader';
 import { LoggerService } from '../../services/loggerService';
 
@@ -18,7 +17,7 @@ export function GameContainer({
   initialState, 
   mediaAssets,
   characters,
-  theme: themeOverride,
+  theme,
   children,
   className,
   ...props
@@ -102,11 +101,11 @@ export function GameContainer({
     }
     
     // Check if theme exists
-    if (!themeOverride) {
+    if (!theme) {
       LoggerService.warn("Theme override is missing, will use default theme");
     }
     
-  }, [loadedConfig, themeOverride]);
+  }, [loadedConfig, theme]);
   
   // הצגת טעינה
   if (isLoading) {
@@ -142,25 +141,22 @@ export function GameContainer({
   }
   
   const configToUse = loadedConfig || gameConfig;
-  const themeToUse = themeOverride || 'base'; // שימוש ב-base כברירת מחדל אם אין theme
   
   LoggerService.debug("GameContainer rendering with GameProvider");
   try {
     return (
-      <ThemeProvider theme={themeToUse}>
-        <GameProvider 
-          gameConfig={configToUse}
-          initialState={initialState}
+      <GameProvider 
+        gameConfig={configToUse}
+        initialState={initialState}
+      >
+        <div 
+          className={`min-h-screen flex flex-col ${className || ''}`}
+          dir="rtl"
+          {...props}
         >
-          <div 
-            className={`min-h-screen flex flex-col ${className || ''}`}
-            dir="rtl"
-            {...props}
-          >
-            {children}
-          </div>
-        </GameProvider>
-      </ThemeProvider>
+          {children}
+        </div>
+      </GameProvider>
     );
   } catch (error) {
     LoggerService.error("Error in GameContainer render:", error);
