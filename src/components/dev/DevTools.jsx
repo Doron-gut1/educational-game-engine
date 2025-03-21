@@ -10,12 +10,41 @@ import { LoggerService } from '../../services/loggerService';
 export function DevTools() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('state');
-  const { state, gameState, gameConfig } = useGameContext();
   const [stageList, setStageList] = useState([]);
   
   // הצגה רק בסביבת פיתוח
   const isDev = import.meta.env.MODE === 'development';
   if (!isDev) return null;
+  
+  // בדיקה שהקונטקסט קיים בטרם שימוש בו
+  let contextExists = true;
+  let state, gameState, gameConfig;
+  
+  try {
+    // נסה להשתמש בקונטקסט והתמודד עם שגיאות
+    const context = useGameContext();
+    if (!context) {
+      contextExists = false;
+    } else {
+      ({ state, gameState, gameConfig } = context);
+    }
+  } catch (error) {
+    LoggerService.warn("DevTools: GameContext not available", error.message);
+    contextExists = false;
+  }
+  
+  // אם אין קונטקסט, הצג הודעה מינימלית
+  if (!contextExists) {
+    return (
+      <div className="fixed bottom-4 left-4 z-50 text-right dir-rtl font-mono">
+        <button 
+          className="bg-gray-800 text-white px-3 py-2 rounded-md shadow-lg hover:bg-gray-700"
+        >
+          🛠️ כלי פיתוח (לא פעיל)
+        </button>
+      </div>
+    );
+  }
   
   // בניית רשימת השלבים בטעינה
   useEffect(() => {
