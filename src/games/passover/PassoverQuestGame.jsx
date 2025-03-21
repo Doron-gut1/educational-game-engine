@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameContainer } from '../../components/layout/GameContainer';
 import { GameManager } from '../../components/GameManager';
-import { NavigationBar } from '../../components/layout/NavigationBar';
 import { LoggerService } from '../../services';
 import { DevTools } from '../../components/dev/DevTools';
 import passoverQuestConfig from './config';
@@ -92,6 +91,8 @@ export default function PassoverQuestGame() {
         gameConfig={passoverQuestConfig}
         characters={passoverCharacters}
         key={gameKey}
+        // העברת theme מהאפליקציה לתוך ה-GameContainer
+        theme="passover"
       >
         <div className="bg-gradient-to-b from-blue-900 to-blue-800 min-h-screen">
           <header className="p-4 border-b border-blue-700">
