@@ -3,9 +3,9 @@ import { TextWithBlanks } from './TextWithBlanks';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';  // הוק חדש
-import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש
-import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש
-import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש
+import  HintsPanel  from '../../components/ui/HintsPanel';  // רכיב חדש
+import  SourceReference  from '../../components/ui/SourceReference';  // רכיב חדש
+import  LearningPopup  from '../../components/ui/LearningPopup';  // רכיב חדש
 
 // ייבוא מערכת העיצוב החדשה
 import { Button, ScrollCard as Card } from '../../design-system/components';

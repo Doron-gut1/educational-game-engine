@@ -8,9 +8,9 @@ import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useTimer } from '../../hooks/useTimer';
 import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
-import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש - src/components/ui/HintsPanel.jsx
-import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש - src/components/ui/SourceReference.jsx
-import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש - src/components/ui/LearningPopup.jsx
+import  HintsPanel  from '../../components/ui/HintsPanel';  // רכיב חדש - src/components/ui/HintsPanel.jsx
+import  SourceReference  from '../../components/ui/SourceReference';  // רכיב חדש - src/components/ui/SourceReference.jsx
+import  LearningPopup  from '../../components/ui/LearningPopup';  // רכיב חדש - src/components/ui/LearningPopup.jsx
 
 /**
  * משחק חיפוש מילים
