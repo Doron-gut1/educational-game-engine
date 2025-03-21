@@ -61,11 +61,96 @@ export class ContentLoader {
   static async loadGameContent(gameId) {
     try {
       const content = await import(`../games/${gameId}/data.json`);
-      return content.default || content;
+      // עיבוד התוכן: נרמול נתיבי נכסים
+      const processedContent = await this.processContent(content.default || content, gameId);
+      return processedContent;
     } catch (error) {
       LoggerService.error(`שגיאה בטעינת תוכן משחק ${gameId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * עיבוד התוכן ונרמול כל הנתיבים
+   */
+  static async processContent(content, gameId) {
+    // יצירת עותק עמוק של התוכן למניעת שינוי המקור
+    const processedContent = JSON.parse(JSON.stringify(content));
+    
+    // עיבוד רקורסיבי של נתיבי נכסים
+    this.processAssetPaths(processedContent, gameId);
+    
+    return processedContent;
+  }
+
+  /**
+   * עיבוד רקורסיבי של נתיבי נכסים בתוכן
+   */
+  static processAssetPaths(obj, gameId) {
+    if (!obj || typeof obj !== 'object') return;
+    
+    for (const key in obj) {
+      const value = obj[key];
+      
+      // עיבוד רקורסיבי למערכים ואובייקטים
+      if (value && typeof value === 'object') {
+        this.processAssetPaths(value, gameId);
+        continue;
+      }
+      
+      // בדיקה אם זהו נתיב לנכס
+      if (typeof value === 'string' && this.isAssetPath(key, value)) {
+        obj[key] = this.normalizeAssetPath(value, key, gameId);
+      }
+    }
+  }
+
+  /**
+   * בדיקה אם מדובר בנתיב לנכס לפי מאפיינים ידועים
+   */
+  static isAssetPath(key, value) {
+    // מפתחות שמרמזים על נכסים גרפיים
+    const assetKeyIndicators = ['background', 'image', 'avatar', 'icon', 'src', 'logo', 'photo'];
+    // סיומות של קבצי מדיה
+    const mediaExtensions = ['.jpg', '.jpeg', '.png', '.svg', '.gif', '.mp3', '.wav', '.mp4', '.pdf'];
+    
+    // בדיקה אם המפתח מרמז על נכס
+    const keyIndicatesAsset = assetKeyIndicators.some(indicator => 
+      key.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    // בדיקה אם הערך עצמו נראה כמו נתיב לקובץ מדיה
+    const valueHasMediaExtension = mediaExtensions.some(ext => 
+      value.toLowerCase().endsWith(ext)
+    );
+    
+    return keyIndicatesAsset || valueHasMediaExtension;
+  }
+
+  /**
+   * נרמול נתיב נכס: המרה לנתיב מלא ותקין
+   */
+  static normalizeAssetPath(path, key, gameId) {
+    // אם כבר נתיב מלא, להשאיר כמו שהוא
+    if (path.startsWith('/') || path.startsWith('http')) {
+      return path;
+    }
+    
+    // זיהוי סוג הנכס לפי המפתח
+    let assetType = 'images'; // ברירת מחדל
+    
+    if (key.includes('background')) {
+      assetType = 'backgrounds';
+    } else if (key.includes('audio') || key.includes('sound')) {
+      assetType = 'audio';
+    } else if (key.includes('character') || key.includes('avatar')) {
+      assetType = 'characters';
+    } else if (key.includes('item') || key.includes('object')) {
+      assetType = 'items';
+    }
+    
+    // יצירת נתיב מלא
+    return `/assets/games/${gameId}/${assetType}/${path}`;
   }
 
   /**
