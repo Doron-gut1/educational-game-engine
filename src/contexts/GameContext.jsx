@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { LoggerService } from '../services/loggerService';
 import { StateManager } from '../core/StateManager';
 import { StageController } from '../core/StageController';
+import { AssetManager } from '../services/assetManager';
 
 // קונטקסט המשחק
 export const GameContext = createContext(null);
@@ -166,6 +167,18 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
     return progress;
   };
   
+  // פונקציית עזר לקבלת נתיב מלא לנכס
+  const getAssetPath = (assetPath, assetType = 'images') => {
+    if (!gameConfig?.id) return assetPath;
+    return AssetManager.getAssetPath(gameConfig.id, assetPath, assetType);
+  };
+  
+  // פונקציית עזר לטעינת נכס
+  const loadAsset = async (assetPath, assetType = 'images') => {
+    if (!gameConfig?.id) return null;
+    return await AssetManager.getAsset(gameConfig.id, assetPath, assetType);
+  };
+  
   return (
     <GameContext.Provider value={{ 
       state, 
@@ -173,14 +186,17 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
       // חשיפת שירותים 
       stateManager,
       stageController,
-      // פונקציות עזר
+      // פונקציות עזר קיימות
       moveToStage,
       completeStage,
       resetGame,
       addScore,
       setDifficulty,
       goBack,
-      calculateProgress
+      calculateProgress,
+      // פונקציות חדשות לניהול נכסים
+      getAssetPath,
+      loadAsset
     }}>
       {children}
     </GameContext.Provider>
