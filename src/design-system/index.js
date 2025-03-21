@@ -8,6 +8,9 @@ export * from './themes';
 // ייצוא רכיבים
 export * from './components';
 
+// ייצוא ThemeProvider והוקים לשימוש בתמה
+export { ThemeProvider, useTheme, useThemeSetter } from './ThemeProvider';
+
 // ייצוא מידע נוסף
 export const DESIGN_SYSTEM_VERSION = '1.0.0';
 export const DESIGN_SYSTEM_NAME = 'מסע הדעת';
@@ -25,6 +28,8 @@ export const designSystemInfo = {
     cards: ['ScrollCard', 'GlassCard'],
     navigation: ['JourneyMap', 'StageMarker'],
   },
+  providers: ['ThemeProvider'],
+  hooks: ['useTheme', 'useThemeSetter'],
   author: 'צוות פיתוח מנוע משחק מודולרי',
   year: 2025
 };
