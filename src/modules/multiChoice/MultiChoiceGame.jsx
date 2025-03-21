@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { QuestionCard } from './QuestionCard';
 import { ProgressBar } from '../../components/ui/ProgressBar';
-import { Button } from '../../components/ui/Button';
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';  // הוק חדש
 import { HintsPanel } from '../../components/ui/HintsPanel';  // רכיב חדש
 import { SourceReference } from '../../components/ui/SourceReference';  // רכיב חדש
 import { LearningPopup } from '../../components/ui/LearningPopup';  // רכיב חדש
+
+// ייבוא מערכת העיצוב החדשה
+import { Button } from '../../design-system/components';
 
 /**
  * משחק שאלות רב-ברירה
