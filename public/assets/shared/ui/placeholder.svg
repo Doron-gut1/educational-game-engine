@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns="http://www.w3.org/2000/svg"
+   width="100"
+   height="100"
+   viewBox="0 0 26.458 26.458"
+   version="1.1">
+  <g>
+    <rect
+       style="fill:#e6e6e6;stroke:#999999;stroke-width:0.529;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:markers stroke fill"
+       width="23.283"
+       height="23.283"
+       x="1.5876"
+       y="1.5876"
+       rx="1.0583"
+       ry="1.0583" />
+    <path
+       style="fill:none;stroke:#999999;stroke-width:0.529;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 1.5875999,24.870399 24.870399,1.5876003" />
+    <path
+       style="fill:none;stroke:#999999;stroke-width:0.529;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 1.5875999,1.5876003 24.870399,24.870399" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.9389px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="13.181607"
+       y="14.422512"><tspan
+         x="13.181607"
+         y="14.422512"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583">תמונה</tspan></text>
+  </g>
+</svg>
