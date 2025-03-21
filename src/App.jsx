@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { defaultTheme } from './themes/defaultTheme';
 import { LoggerService } from './services';
-import { DevTools } from './components/dev/DevTools';
 import './App.css';
 
 // Import game components
@@ -115,7 +114,7 @@ function App() {
     <ThemeProvider initialTheme={defaultTheme}>
       <div className="app">
         {renderSelectedGame()}
-        <DevTools />
+        {/* DevTools הוסר מכאן לטיפול בשגיאת הקונטקסט */}
       </div>
     </ThemeProvider>
   );
