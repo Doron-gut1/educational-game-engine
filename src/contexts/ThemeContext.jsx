@@ -1,38 +1,25 @@
-import React, { createContext, useState, useContext } from 'react';
-import { defaultTheme } from '../themes/defaultTheme';
+/**
+ * קובץ זה קיים למטרות תאימות לאחור בלבד
+ * יש להשתמש ב-ThemeProvider מ-design-system במקום זה
+ */
 
-// יצירת קונטקסט לנושא
-export const ThemeContext = createContext();
+import React, { createContext } from 'react';
+import { ThemeContext as DesignSystemThemeContext } from '../design-system/ThemeProvider';
 
-// ספק נושא שמאפשר גישה לכל רכיבי הילדים
-export const ThemeProvider = ({ children, initialTheme = defaultTheme }) => {
-  const [theme, setTheme] = useState(initialTheme);
+// ייצוא מחדש של ה-ThemeContext מ-design-system
+export const ThemeContext = DesignSystemThemeContext;
 
-  const changeTheme = (newTheme) => {
-    setTheme(newTheme);
-  };
-
-  return (
-    <ThemeContext.Provider value={{ theme, changeTheme }}>
-      {children}
-    </ThemeContext.Provider>
+// Function to create a legacy theme provider for backward compatibility
+export function ThemeProvider({ children, theme }) {
+  console.warn(
+    'Using deprecated ThemeContext.jsx. Please update imports to use design-system ThemeProvider instead.'
   );
-};
+  
+  return (
+    <DesignSystemThemeContext.Provider value={{ theme }}>
+      {children}
+    </DesignSystemThemeContext.Provider>
+  );
+}
 
-// הוק לשימוש בנושא
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context.theme;
-};
-
-// הוק לשינוי נושא
-export const useChangeTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useChangeTheme must be used within a ThemeProvider');
-  }
-  return context.changeTheme;
-};
+export default ThemeContext;
