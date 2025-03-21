@@ -112,4 +112,21 @@ export class StageController {
       });
     }
   }
+  
+  /**
+   * ניקוי משאבים לפני סיום
+   */
+  dispose() {
+    LoggerService.debug("StageController disposing resources");
+    
+    // ניקוי כל המשאבים שהבקר משתמש בהם
+    if (this.transitionTimeout) {
+      clearTimeout(this.transitionTimeout);
+      this.transitionTimeout = null;
+    }
+    
+    // איפוס ההיסטוריה
+    this.history = [];
+    this.transitionInProgress = false;
+  }
 }
