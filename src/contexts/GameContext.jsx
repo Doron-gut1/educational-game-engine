@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { LoggerService } from '../services/loggerService';
 import { StateManager } from '../core/StateManager';
 import { StageController } from '../core/StageController';
@@ -12,6 +12,9 @@ export const GameContext = createContext(null);
  */
 export function GameProvider({ children, gameConfig, initialState = {} }) {
   LoggerService.debug("[GameContext] Initializing GameProvider");
+  
+  // דגל לוידוא שהאתחול קורה רק פעם אחת - מנגנון למניעת לולאות אינסופיות
+  const isInitialized = useRef(false);
   
   // יצירת מופעים של השירותים החדשים
   const [stateManager] = useState(() => {
@@ -41,15 +44,20 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
     };
   }, [stateManager]);
   
-  // אתחול המשחק בטעינה
+  // אתחול המשחק בטעינה - מתבצע רק פעם אחת
   useEffect(() => {
-    LoggerService.info('[GameContext] Initializing game state');
+    // בדיקה האם האתחול כבר התרחש - מונע לולאה אינסופית
+    if (isInitialized.current) {
+      return;
+    }
     
     // וידוא שיש תצורת משחק תקינה
     if (!gameConfig) {
       LoggerService.warn('[GameContext] No game config provided');
       return;
     }
+    
+    LoggerService.info('[GameContext] Initializing game state');
     
     // אתחול המצב
     stateManager.resetState({
@@ -64,19 +72,27 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
       ...initialState // שילוב מצב התחלתי אם הועבר
     });
     
-    LoggerService.debug('[GameContext] State initialized successfully');
+    // סימון שהאתחול כבר התרחש - למניעת לולאה אינסופית
+    isInitialized.current = true;
     
-    // שמירת מצב בעת עזיבת העמוד
+    LoggerService.debug('[GameContext] State initialized successfully');
+  }, [gameConfig, stateManager, initialState]);
+  
+  // טיפול באירועי מחזור חיים בנפרד מאתחול המצב
+  useEffect(() => {
+    // פונקציה לשמירת מצב בעת עזיבת העמוד
     const handleBeforeUnload = () => {
       LoggerService.debug('[GameContext] Saving state before unload');
       
       // יישום שמירה - יש להוסיף מנגנון שמירה
       try {
         const currentState = stateManager.getState();
-        localStorage.setItem(
-          `game_${gameConfig.id}_state`,
-          JSON.stringify(currentState)
-        );
+        if (gameConfig?.id) {
+          localStorage.setItem(
+            `game_${gameConfig.id}_state`,
+            JSON.stringify(currentState)
+          );
+        }
       } catch (e) {
         LoggerService.error('Failed to save game state:', e);
       }
@@ -87,7 +103,7 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [stateManager, gameConfig, initialState]);
+  }, [stateManager, gameConfig]);
   
   // פונקציות עזר שחושפות את פונקציונליות המנגנון
   
