@@ -6,6 +6,7 @@ export { Card } from './Card';
 export { ScrollCard } from './ScrollCard';
 export { GlassCard } from './GlassCard';
 export { Heading } from './Heading';
+export { StageHeading } from './StageHeading';
 
 // רכיבי פריסה
 export { PageContainer } from './PageContainer';
@@ -29,6 +30,7 @@ export default {
   ScrollCard,
   GlassCard,
   Heading,
+  StageHeading,
   PageContainer,
   GameContainer,
   JourneyMap,
