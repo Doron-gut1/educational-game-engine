@@ -43,7 +43,7 @@ export function HomePage() {
   }, []);
   
   return (
-    <ThemeProvider theme={baseTheme}>
+    <ThemeProvider theme="base">
       <PageContainer className="min-h-screen py-10 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700">
         {/* צורות דקורטיביות ברקע */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
@@ -77,7 +77,7 @@ export function HomePage() {
             <p>{error}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto relative z-10">
             <GameCard 
               game={{
                 id: 'passover',
@@ -157,7 +157,7 @@ function GameCard({ game, active = true }) {
         </div>
         
         <div className="p-6 pt-0 mt-auto">
-          <Button variant="disabled" className="w-full">
+          <Button variant="outline" className="w-full opacity-60 cursor-not-allowed">
             בקרוב
           </Button>
         </div>
