@@ -25,7 +25,7 @@ export function HomePage() {
         // הוספת נתיבים לתמונות ממוזערות
         const gamesWithThumbnails = games.map(game => ({
           ...game,
-          thumbnail: `/assets/games/${game.id}/backgrounds/thumbnail.jpg`
+          thumbnail: AssetManager.getAssetPath(game.id, 'thumbnail.svg', 'backgrounds')
         }));
         
         setAvailableGames(gamesWithThumbnails);
@@ -81,7 +81,7 @@ export function HomePage() {
                 id: 'passover',
                 name: 'המסע לחירות',
                 description: 'משחק פסח אינטראקטיבי על מסע יציאת מצרים',
-                thumbnail: '/assets/games/passover/backgrounds/thumbnail.jpg'
+                thumbnail: AssetManager.getAssetPath('passover', 'thumbnail.svg', 'backgrounds')
               }}
               active={true}
             />
@@ -89,9 +89,9 @@ export function HomePage() {
             <GameCard 
               game={{
                 id: 'tubishvat',
-                name: 'חגיגת ט\\\"ו בשבט',
-                description: 'משחק בנושא ט"ו בשבט ושבעת המינים',
-                thumbnail: '/assets/games/tubishvat/backgrounds/thumbnail.jpg'
+                name: 'חגיגת ט\\\\\\\"ו בשבט',
+                description: 'משחק בנושא ט\"ו בשבט ושבעת המינים',
+                thumbnail: AssetManager.getAssetPath('tubishvat', 'thumbnail.jpg', 'backgrounds')
               }}
               active={false}
             />
@@ -141,10 +141,7 @@ function GameCard({ game, active = true }) {
             src={game.thumbnail} 
             alt={game.name} 
             className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = '/assets/shared/ui/default-thumbnail.jpg';
-            }}
+            onError={(e) => AssetManager.handleImageError(e, 'backgrounds')}
           />
         </div>
         
@@ -181,10 +178,7 @@ function GameCard({ game, active = true }) {
           src={game.thumbnail} 
           alt={game.name} 
           className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = '/assets/shared/ui/default-thumbnail.jpg';
-          }}
+          onError={(e) => AssetManager.handleImageError(e, 'backgrounds')}
         />
       </div>
       
