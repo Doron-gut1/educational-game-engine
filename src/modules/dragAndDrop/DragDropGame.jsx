@@ -1,120 +1,171 @@
-// src/modules/dragAndDrop/DragDropGame.jsx
-import React, { useState } from 'react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { DraggableItem } from './DraggableItem';
-import { DropZone } from './DropZone';
+import React, { useState, useEffect } from 'react';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
-import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
+import { useHints } from '../../hooks/useHints';
 
 // ייבוא מערכת העיצוב החדשה
 import { 
   Button, 
-  ProgressTracker, 
+  Card, 
   HintsPanel, 
   SourceReference, 
-  LearningPopup 
+  LearningPopup,
+  ProgressTracker
 } from '../../design-system/components';
 
 /**
- * משחק גרירה והשלכה
+ * רכיב משחק גרירה והשלכה
  * @param {Object} props - פרופס הרכיב
  * @param {Array} props.items - פריטים לגרירה
  * @param {Array} props.dropZones - אזורי יעד להשלכה
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
  * @param {string} props.title - כותרת המשחק
- * @param {number} props.basePoints - נקודות בסיס להתאמה נכונה
- * @param {Array} props.hints - רמזים למשחק
- * @param {Object} props.sourceReference - מקור ורפרנס לשאלות
- * @param {Object} props.learningPopup - מידע לחלון סיכום הלמידה
+ * @param {number} props.basePoints - נקודות בסיס
+ * @param {Object} props.sourceReference - מקור ורפרנס 
+ * @param {Object} props.learningPopup - חלון סיכום למידה
  */
 export function DragDropGame({
   items = [],
   dropZones = [],
   onComplete,
-  title = 'גרור ושדך',
-  description = '',
-  basePoints = 10,
-  showFeedbackImmediately = true,
-  hints = [],
+  title = 'גרירה והשלכה',
+  basePoints = 15,
   sourceReference = null,
   learningPopup = null
 }) {
+  const { state, getAssetPath, handleImageError } = useGameContext();
   const { addScore } = useScoring();
   
-  // מצב פריטים שהושלכו
-  const [droppedItems, setDroppedItems] = useState({});
-  const [feedbackVisible, setFeedbackVisible] = useState(false);
-  const [showResults, setShowResults] = useState(false);
+  // מצב המשחק
+  const [availableItems, setAvailableItems] = useState([]);
+  const [zones, setZones] = useState([]);
+  const [isComplete, setIsComplete] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [score, setScore] = useState(0);
   const [showLearningPopup, setShowLearningPopup] = useState(false);
   
-  // שימוש בהוק רמזים
+  // שימוש בהוק הרמזים
   const { 
     canRevealHint, 
     revealNextHint, 
     getRevealedHints,
     hintsUsed,
     maxHints
-  } = useHints(hints);
+  } = useHints([...(items || []), ...(dropZones || [])].flatMap(item => item.hints || []));
   
-  // סופר פריטים שהושלכו
-  const countDroppedItems = Object.keys(droppedItems).length;
-  
-  // בדיקה אם כל הפריטים הושלכו
-  const allItemsDropped = countDroppedItems === items.length;
-  
-  // טיפול בהשלכת פריט
-  const handleItemDrop = (itemId, dropZoneId) => {
-    // בדיקה אם הפריט כבר מושלך
-    const existingDropZone = Object.entries(droppedItems).find(
-      ([_, zoneItem]) => zoneItem === itemId
-    )?.[0];
+  // אתחול הפריטים והאזורים
+  useEffect(() => {
+    // עיבוד הפריטים לגרירה - כולל תמונות אם יש
+    const processedItems = items.map(item => ({
+      ...item,
+      image: item.image ? getAssetPath(item.image, 'images') : null
+    }));
     
-    // אם הפריט כבר באזור הזה, אין צורך לעשות כלום
-    if (existingDropZone === dropZoneId) return;
+    // עיבוד אזורי היעד - כולל תמונות אם יש
+    const processedZones = dropZones.map(zone => ({
+      ...zone,
+      image: zone.image ? getAssetPath(zone.image, 'images') : null,
+      items: [] // מאתחל את הפריטים באזור כמערך ריק
+    }));
     
-    // אם הפריט באזור אחר, מסירים אותו משם
-    if (existingDropZone) {
-      const newDroppedItems = { ...droppedItems };
-      delete newDroppedItems[existingDropZone];
-      setDroppedItems(newDroppedItems);
+    setAvailableItems(processedItems);
+    setZones(processedZones);
+  }, [items, dropZones, getAssetPath]);
+  
+  // טיפול בגרירה והשלכה
+  const handleDragEnd = (result) => {
+    const { source, destination } = result;
+    
+    // אם אין יעד או היעד זהה למקור - לא קרה שינוי
+    if (!destination || (source.droppableId === destination.droppableId && 
+                        source.index === destination.index)) {
+      return;
     }
     
-    // אם יש פריט אחר באזור היעד, מחליפים ביניהם
-    const itemInTargetZone = droppedItems[dropZoneId];
+    // העתקת מצב נוכחי
+    let newAvailable = [...availableItems];
+    let newZones = [...zones];
     
-    setDroppedItems(prev => {
-      const newDroppedItems = { ...prev };
-      newDroppedItems[dropZoneId] = itemId;
-      return newDroppedItems;
-    });
-    
-    // בדיקת נכונות מיידית אם הגדרת
-    if (showFeedbackImmediately) {
-      setFeedbackVisible(true);
+    // גרירה ממאגר הפריטים הזמינים
+    if (source.droppableId === 'available') {
+      // העתקת הפריט
+      const [draggedItem] = newAvailable.splice(source.index, 1);
+      
+      // הוספה לאזור היעד
+      const targetZoneIndex = newZones.findIndex(z => z.id === destination.droppableId);
+      if (targetZoneIndex >= 0) {
+        newZones[targetZoneIndex].items.splice(destination.index, 0, draggedItem);
+      }
+    }
+    // גרירה מאזור אחד לאזור אחר
+    else if (destination.droppableId !== source.droppableId) {
+      // מציאת אזור המקור והיעד
+      const sourceZoneIndex = newZones.findIndex(z => z.id === source.droppableId);
+      const targetZoneIndex = newZones.findIndex(z => z.id === destination.droppableId);
+      
+      if (sourceZoneIndex >= 0 && targetZoneIndex >= 0) {
+        // העברת הפריט בין האזורים
+        const [draggedItem] = newZones[sourceZoneIndex].items.splice(source.index, 1);
+        newZones[targetZoneIndex].items.splice(destination.index, 0, draggedItem);
+      }
+    }
+    // סידור מחדש באותו אזור
+    else {
+      const zoneIndex = newZones.findIndex(z => z.id === source.droppableId);
+      if (zoneIndex >= 0) {
+        // סידור מחדש בתוך האזור
+        const [draggedItem] = newZones[zoneIndex].items.splice(source.index, 1);
+        newZones[zoneIndex].items.splice(destination.index, 0, draggedItem);
+      }
     }
     
-    // בדיקה אם כל הפריטים הושלכו
-    if (countDroppedItems + 1 === items.length && !existingDropZone) {
-      setFeedbackVisible(true);
+    // עדכון המצב
+    setAvailableItems(newAvailable);
+    setZones(newZones);
+    
+    // בדיקה האם המשחק הושלם (כל הפריטים במקום)
+    if (newAvailable.length === 0) {
+      // בדיקת נכונות: האם כל פריט נמצא באזור הנכון
+      const isAllCorrect = newZones.every(zone => {
+        // בדיקה שכל הפריטים באזור אכן שייכים אליו
+        return zone.items.every(item => item.correctZone === zone.id);
+      });
+      
+      if (isAllCorrect) {
+        // חישוב ניקוד
+        const finalScore = basePoints - (hintsUsed * 2); // הורדת נקודות על שימוש ברמזים
+        setScore(finalScore);
+        addScore(finalScore);
+        setIsCorrect(true);
+      } else {
+        setIsCorrect(false);
+      }
+      
+      setIsComplete(true);
+      setShowFeedback(true);
     }
   };
   
-  // שחרור פריט מאזור השלכה
-  const handleItemRelease = (itemId) => {
-    // מציאת האזור שהפריט נמצא בו
-    const dropZoneId = Object.entries(droppedItems).find(
-      ([_, id]) => id === itemId
-    )?.[0];
-    
-    // אם נמצא, מסירים אותו
-    if (dropZoneId) {
-      setDroppedItems(prev => {
-        const newDroppedItems = { ...prev };
-        delete newDroppedItems[dropZoneId];
-        return newDroppedItems;
-      });
+  // לחיצה על כפתור ההמשך
+  const handleContinue = () => {
+    // אם יש חלון סיכום למידה, הצג אותו
+    if (learningPopup && isCorrect) {
+      setShowLearningPopup(true);
+    } else {
+      // אחרת, סיום המשחק
+      if (onComplete) {
+        onComplete(score);
+      }
+    }
+  };
+  
+  // סגירת חלון הלמידה וסיום המשחק
+  const handleCloseLearningPopup = () => {
+    setShowLearningPopup(false);
+    if (onComplete) {
+      onComplete(score);
     }
   };
   
@@ -123,202 +174,202 @@ export function DragDropGame({
     revealNextHint();
   };
   
-  // בדיקת תוצאות
-  const checkResults = () => {
-    let correctCount = 0;
-    let totalPoints = 0;
+  // ניסיון מחדש
+  const handleReset = () => {
+    // איפוס המשחק
+    const processedItems = items.map(item => ({
+      ...item,
+      image: item.image ? getAssetPath(item.image, 'images') : null
+    }));
     
-    // בדיקת כל השלכה
-    Object.entries(droppedItems).forEach(([dropZoneId, itemId]) => {
-      const item = items.find(item => item.id === itemId);
-      if (item && item.category === dropZoneId) {
-        correctCount++;
-        const points = item.points || basePoints;
-        totalPoints += points;
-      }
-    });
+    const processedZones = dropZones.map(zone => ({
+      ...zone,
+      image: zone.image ? getAssetPath(zone.image, 'images') : null,
+      items: []
+    }));
     
-    // הוספת ניקוד
-    addScore(totalPoints);
-    setScore(totalPoints);
-    setShowResults(true);
-    
-    // אם הכל נכון וקיים חלון למידה, יש להציג אותו לפני הסיום
-    if (correctCount === items.length) {
-      if (learningPopup) {
-        setShowLearningPopup(true);
-      } else if (onComplete) {
-        // אחרת, מסיימים ישירות
-        setTimeout(() => {
-          onComplete(totalPoints);
-        }, 2000);
-      }
-    }
+    setAvailableItems(processedItems);
+    setZones(processedZones);
+    setIsComplete(false);
+    setIsCorrect(false);
+    setShowFeedback(false);
+    setScore(0);
   };
-
-  // טיפול בסגירת חלון הלמידה
-  const handleCloseLearningPopup = () => {
-    setShowLearningPopup(false);
-    if (onComplete) {
-      onComplete(score);
-    }
-  };
-  
-  // בדיקה אם פריט מושלך נכון
-  const isItemCorrectlyDropped = (itemId) => {
-    if (!feedbackVisible) return null;
-    
-    const item = items.find(item => item.id === itemId);
-    const dropZoneId = Object.entries(droppedItems).find(
-      ([_, id]) => id === itemId
-    )?.[0];
-    
-    if (!item || !dropZoneId) return null;
-    
-    return item.category === dropZoneId;
-  };
-  
-  // רינדור תוצאות
-  if (showResults) {
-    const correctCount = items.reduce((count, item) => {
-      const dropZoneId = Object.entries(droppedItems).find(
-        ([_, id]) => id === item.id
-      )?.[0];
-      
-      return count + (item.category === dropZoneId ? 1 : 0);
-    }, 0);
-    
-    return (
-      <div className="p-6 bg-white rounded-lg shadow-lg text-center">
-        <h2 className="text-2xl font-bold text-green-800 mb-4">סיכום</h2>
-        <p className="text-xl mb-4">צברת {score} נקודות</p>
-        <p className="text-lg mb-6">השלכת נכון {correctCount} מתוך {items.length} פריטים</p>
-        
-        <Button onClick={() => {
-          if (learningPopup) {
-            setShowLearningPopup(true);
-          } else if (onComplete) {
-            onComplete(score);
-          }
-        }} size="large">סיים</Button>
-      </div>
-    );
-  }
   
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">{title}</h2>
-          <div className="text-sm text-gray-500">
-            {countDroppedItems} מתוך {items.length} פריטים
-          </div>
-        </div>
-        
-        {description && (
-          <p className="text-gray-600">{description}</p>
-        )}
-        
-        <ProgressTracker
-          stages={Array.from({ length: items.length }, (_, i) => ({ id: `item${i}`, title: `פריט ${i+1}` }))}
-          currentStageId="item0"
-          progressValue={countDroppedItems}
-          progressMax={items.length}
-          variant="progress-only"
-        />
-        
-        {/* מקור ורפרנס */}
-        {sourceReference && (
-          <SourceReference 
-            source={sourceReference.source}
-            reference={sourceReference.reference}
-            expandable={true}
-            initiallyExpanded={false}
-            className="mb-4"
-          />
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* אזורי השלכה */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">יעדים</h3>
-            {dropZones.map(zone => (
-              <DropZone
-                key={zone.id}
-                id={zone.id}
-                label={zone.label}
-                onItemDrop={(itemId) => handleItemDrop(itemId, zone.id)}
-                droppedItem={droppedItems[zone.id]}
-                items={items}
-                isCorrect={feedbackVisible ? 
-                  (droppedItems[zone.id] ? isItemCorrectlyDropped(droppedItems[zone.id]) : null) : 
-                  null
-                }
-              />
-            ))}
-          </div>
-          
-          {/* פריטים לגרירה */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">פריטים</h3>
-            <div className="bg-gray-50 p-4 rounded-lg min-h-[200px] flex flex-wrap gap-3">
-              {items.map(item => {
-                // בדיקה אם הפריט כבר מושלך
-                const isDropped = Object.values(droppedItems).includes(item.id);
-                const isCorrect = isItemCorrectlyDropped(item.id);
-                
-                return isDropped ? null : (
-                  <DraggableItem
-                    key={item.id}
-                    id={item.id}
-                    type={item.type || 'text'}
-                    content={item.content || item.text}
-                    isCorrect={isCorrect}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
-        
-        {/* פאנל רמזים */}
-        <HintsPanel 
-          hints={hints}
-          revealedHints={getRevealedHints()}
-          canRevealMore={canRevealHint()}
-          onRequestHint={handleRequestHint}
-          hintsUsed={hintsUsed}
-          maxHints={maxHints}
-        />
-        
-        {/* כפתור בדיקה */}
-        {!showFeedbackImmediately && allItemsDropped && (
-          <div className="flex justify-center mt-4">
-            <Button onClick={checkResults} size="large">בדוק תוצאות</Button>
-          </div>
-        )}
-        
-        {/* כפתור סיום */}
-        {feedbackVisible && (
-          <div className="flex justify-center mt-4">
-            <Button onClick={checkResults} size="large">הצג תוצאות</Button>
-          </div>
-        )}
-        
-        {/* חלון סיכום למידה */}
-        {learningPopup && (
-          <LearningPopup
-            isOpen={showLearningPopup}
-            onClose={handleCloseLearningPopup}
-            onContinue={handleCloseLearningPopup}
-            title={learningPopup.title || "מה למדנו?"}
-            keyPoints={learningPopup.keyPoints || []}
-            mainValue={learningPopup.mainValue || ""}
-            thinkingPoints={learningPopup.thinkingPoints || []}
-            familyActivity={learningPopup.familyActivity || ""}
-          />
-        )}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">{title}</h2>
       </div>
-    </DndProvider>
+      
+      {/* מקור ורפרנס */}
+      {sourceReference && (
+        <SourceReference 
+          source={sourceReference.source}
+          reference={sourceReference.reference}
+          expandable={true}
+          initiallyExpanded={false}
+          className="mb-4"
+        />
+      )}
+      
+      <DragDropContext onDragEnd={handleDragEnd}>
+        {/* אזור הפריטים הזמינים */}
+        <Droppable droppableId="available" direction="horizontal">
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className={`p-4 min-h-16 rounded border-2 ${
+                snapshot.isDraggingOver ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+              } flex flex-wrap gap-4 mb-6`}
+            >
+              {availableItems.map((item, index) => (
+                <Draggable key={item.id} draggableId={item.id} index={index}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      className={`p-3 rounded border cursor-pointer ${
+                        snapshot.isDragging ? 'bg-blue-100 shadow-lg' : 'bg-white'
+                      }`}
+                    >
+                      {item.image ? (
+                        <div className="flex flex-col items-center text-center">
+                          <img 
+                            src={item.image} 
+                            alt={item.text || "פריט"} 
+                            className="h-16 w-auto object-contain mb-2" 
+                            onError={handleImageError}
+                          />
+                          <span>{item.text}</span>
+                        </div>
+                      ) : (
+                        <span>{item.text}</span>
+                      )}
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+              {availableItems.length === 0 && !isComplete && (
+                <div className="text-gray-500 p-2">גרור את כל הפריטים לאזורים המתאימים</div>
+              )}
+            </div>
+          )}
+        </Droppable>
+        
+        {/* אזורי היעד */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {zones.map((zone) => (
+            <Card key={zone.id} className="relative overflow-hidden">
+              <h3 className="text-lg font-bold mb-2">{zone.title}</h3>
+              {zone.image && (
+                <img 
+                  src={zone.image} 
+                  alt={zone.title || "אזור"} 
+                  className="h-32 w-full object-cover mb-3 rounded" 
+                  onError={handleImageError}
+                />
+              )}
+              
+              <Droppable droppableId={zone.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-24 p-3 rounded border-2 ${
+                      snapshot.isDraggingOver ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                    }`}
+                  >
+                    {zone.items.map((item, index) => (
+                      <Draggable key={item.id} draggableId={item.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`p-3 rounded border mb-2 last:mb-0 ${
+                              snapshot.isDragging ? 'bg-blue-100 shadow-lg' : 'bg-white'
+                            }`}
+                          >
+                            {item.image ? (
+                              <div className="flex flex-col items-center text-center">
+                                <img 
+                                  src={item.image} 
+                                  alt={item.text || "פריט"} 
+                                  className="h-16 w-auto object-contain mb-2" 
+                                  onError={handleImageError}
+                                />
+                                <span>{item.text}</span>
+                              </div>
+                            ) : (
+                              <span>{item.text}</span>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    {zone.items.length === 0 && (
+                      <div className="text-gray-400 p-2">גרור פריטים לכאן</div>
+                    )}
+                  </div>
+                )}
+              </Droppable>
+            </Card>
+          ))}
+        </div>
+      </DragDropContext>
+      
+      {/* פאנל רמזים */}
+      <HintsPanel 
+        hints={getRevealedHints()}
+        canRevealMore={canRevealHint()}
+        onRequestHint={handleRequestHint}
+        hintsUsed={hintsUsed}
+        maxHints={maxHints}
+      />
+      
+      {/* משוב על המצב הנוכחי */}
+      {showFeedback && (
+        <div className={`p-4 rounded-lg ${isCorrect ? 'bg-green-100' : 'bg-red-100'} mb-4`}>
+          <h3 className={`text-lg font-bold ${isCorrect ? 'text-green-700' : 'text-red-700'} mb-2`}>
+            {isCorrect ? 'כל הכבוד!' : 'לא בדיוק...'}
+          </h3>
+          <p className="mb-4">
+            {isCorrect
+              ? `השלמת את המשימה בהצלחה! צברת ${score} נקודות.`
+              : 'לא כל הפריטים נמצאים באזור הנכון. נסה שוב!'}
+          </p>
+          
+          <div className="flex justify-end space-x-3 rtl:space-x-reverse">
+            {!isCorrect && (
+              <Button onClick={handleReset} variant="secondary">
+                נסה שוב
+              </Button>
+            )}
+            <Button onClick={handleContinue}>
+              {isCorrect ? 'המשך' : 'סיים בכל זאת'}
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* חלון סיכום למידה */}
+      {learningPopup && (
+        <LearningPopup
+          isOpen={showLearningPopup}
+          onClose={handleCloseLearningPopup}
+          onContinue={handleCloseLearningPopup}
+          title={learningPopup.title || "מה למדנו?"}
+          keyPoints={learningPopup.keyPoints || []}
+          mainValue={learningPopup.mainValue || ""}
+          thinkingPoints={learningPopup.thinkingPoints || []}
+          familyActivity={learningPopup.familyActivity || ""}
+        />
+      )}
+    </div>
   );
 }
