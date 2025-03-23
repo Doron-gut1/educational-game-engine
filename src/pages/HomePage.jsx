@@ -41,8 +41,8 @@ export function HomePage() {
           },
           {
             id: 'tubishvat',
-            name: 'חגיגת ט\\"ו בשבט',
-            description: 'משחק בנושא ט\\"ו בשבט ושבעת המינים',
+            name: 'חגיגת ט\\\"ו בשבט',
+            description: 'משחק בנושא ט\\\"ו בשבט ושבעת המינים',
             thumbnail: '/assets/games/tubishvat/backgrounds/thumbnail.svg',
             active: false,
             theme: 'tubishvat'
@@ -71,7 +71,7 @@ export function HomePage() {
   }, []);
   
   return (
-    <ThemeProvider theme="base">
+    <ThemeProvider theme="default">
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 overflow-hidden relative">
         {/* אלמנטים דקורטיביים ברקע */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
