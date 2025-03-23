@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { QuestionCard } from './QuestionCard';
-import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';  // הוק חדש
-import HintsPanel from '../../components/ui/HintsPanel';  // רכיב חדש - שינוי מהייבוא הקודם
-import SourceReference from '../../components/ui/SourceReference';  // רכיב חדש - שינוי מהייבוא הקודם
-import LearningPopup from '../../components/ui/LearningPopup';  // רכיב חדש - שינוי מהייבוא הקודם
 
 // ייבוא מערכת העיצוב החדשה
-import { Button } from '../../design-system/components';
+import { 
+  Button, 
+  ProgressTracker, 
+  HintsPanel, 
+  SourceReference, 
+  LearningPopup 
+} from '../../design-system/components';
 
 /**
  * משחק שאלות רב-ברירה
@@ -162,10 +164,10 @@ export function MultiChoiceGame({
         <div className="text-sm text-gray-500">שאלה {currentQuestionIndex + 1} מתוך {questions.length}</div>
       </div>
       
-      <ProgressBar 
-        value={currentQuestionIndex} 
-        max={questions.length - 1} 
-        color="primary" 
+      <ProgressTracker 
+        stages={questions.map((q, idx) => ({ id: `q${idx}`, title: `שאלה ${idx+1}` }))}
+        currentStageId={`q${currentQuestionIndex}`}
+        compact={true}
       />
       
       {/* מקור ורפרנס */}
