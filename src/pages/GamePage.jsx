@@ -467,3 +467,6 @@ export function GamePage() {
     </ThemeProvider>
   );
 }
+
+// הוספת ייצוא ברירת מחדל כדי שיתאים ל-import ב-App.jsx
+export default GamePage;
