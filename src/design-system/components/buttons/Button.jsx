@@ -6,7 +6,7 @@ import PropTypes from 'prop-types';
  * 
  * @param {Object} props - Props הרכיב
  * @param {ReactNode} props.children - תוכן הכפתור
- * @param {string} props.variant - סגנון הכפתור (primary, secondary, outline, text)
+ * @param {string} props.variant - סגנון הכפתור (primary, secondary, accent, outline, text או שם התמה)
  * @param {string} props.size - גודל הכפתור (small, medium, large)
  * @param {boolean} props.disabled - האם הכפתור מושבת
  * @param {boolean} props.fullWidth - האם הכפתור יתפרס על פני כל הרוחב
@@ -35,6 +35,11 @@ const Button = ({
     accent: "bg-accent text-white hover:bg-accentDark active:bg-accentDark/90 shadow-md hover:shadow-lg focus:ring-accent/50",
     outline: "border-2 border-primary text-primary hover:bg-primaryLight hover:bg-opacity-20 active:bg-primaryLight/30 focus:ring-primary/40",
     text: "text-primary hover:bg-primaryLight hover:bg-opacity-10 active:bg-primaryLight/20 focus:ring-primary/30",
+    disabled: "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none",
+    
+    // וריאנטים לפי נושאי חגים
+    passover: "bg-blue-700 text-white hover:bg-blue-800 active:bg-blue-900 shadow-md hover:shadow-lg focus:ring-blue-500/50",
+    tubishvat: "bg-green-600 text-white hover:bg-green-700 active:bg-green-800 shadow-md hover:shadow-lg focus:ring-green-500/50",
   };
   
   // מחלקות לפי גודל
@@ -61,10 +66,13 @@ const Button = ({
     pulseBorder: "animate-pulse-border"
   };
   
+  // בחירת מחלקות וריאנט - אם לא קיים, נשתמש בברירת מחדל
+  const variantClass = variantClasses[variant] || variantClasses.primary;
+  
   // חיבור כל המחלקות יחד
   const classes = [
     baseClasses,
-    variantClasses[variant] || variantClasses.primary,
+    variantClass,
     sizeClasses[size] || sizeClasses.medium,
     disabledClasses,
     widthClasses,
@@ -87,7 +95,7 @@ const Button = ({
 
 Button.propTypes = {
   children: PropTypes.node.isRequired,
-  variant: PropTypes.oneOf(['primary', 'secondary', 'accent', 'outline', 'text']),
+  variant: PropTypes.string,
   size: PropTypes.oneOf(['small', 'medium', 'large']),
   disabled: PropTypes.bool,
   fullWidth: PropTypes.bool,
