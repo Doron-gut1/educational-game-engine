@@ -1,5 +1,5 @@
 /**
- * ייצוא מרוכז של כל רכיבי הניווט במערכת
+ * ייצוא מרוכז של רכיבי ניווט
  */
 export { default as JourneyMap } from './JourneyMap';
-export { StageMarker } from './StageMarker';
+export { default as ProgressTracker } from './ProgressTracker';
