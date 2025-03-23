@@ -73,6 +73,13 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
       ...initialState // שילוב מצב התחלתי אם הועבר
     });
     
+    // טעינה מקדימה של נכסים חיוניים, אם המשחק מזוהה
+    if (gameConfig?.id) {
+      AssetManager.preloadEssentialAssets(gameConfig.id).catch(err => {
+        LoggerService.warn(`[GameContext] Failed to preload assets: ${err.message}`);
+      });
+    }
+    
     // סימון שהאתחול כבר התרחש - למניעת לולאה אינסופית
     isInitialized.current = true;
     
@@ -170,13 +177,36 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
   // פונקציית עזר לקבלת נתיב מלא לנכס
   const getAssetPath = (assetPath, assetType = 'images') => {
     if (!gameConfig?.id) return assetPath;
+    
+    // וידוא שהנתיב נקי
+    if (assetPath.startsWith('/') || assetPath.startsWith('http')) {
+      return assetPath;
+    }
+    
     return AssetManager.getAssetPath(gameConfig.id, assetPath, assetType);
   };
   
   // פונקציית עזר לטעינת נכס
   const loadAsset = async (assetPath, assetType = 'images') => {
     if (!gameConfig?.id) return null;
-    return await AssetManager.getAsset(gameConfig.id, assetPath, assetType);
+    
+    try {
+      return await AssetManager.getAsset(gameConfig.id, assetPath, assetType);
+    } catch (error) {
+      LoggerService.error(`[GameContext] Failed to load asset: ${assetPath}`, error);
+      return null;
+    }
+  };
+  
+  // פונקציה לטיפול בשגיאות טעינת תמונה
+  const handleImageError = (event) => {
+    if (!event || !event.target) return;
+    
+    // מניעת לולאות אינסופיות
+    event.target.onerror = null;
+    
+    // שימוש בשירות ה-AssetManager לטיפול בשגיאות תמונה
+    AssetManager.handleImageError(event, 'images');
   };
   
   return (
@@ -196,7 +226,8 @@ export function GameProvider({ children, gameConfig, initialState = {} }) {
       calculateProgress,
       // פונקציות חדשות לניהול נכסים
       getAssetPath,
-      loadAsset
+      loadAsset,
+      handleImageError
     }}>
       {children}
     </GameContext.Provider>
