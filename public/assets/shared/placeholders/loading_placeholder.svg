@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" rx="10" fill="#E2E8F0"/>
+  <circle cx="100" cy="100" r="50" fill="#94A3B8" fill-opacity="0.5"/>
+  <path d="M100 70C83.4315 70 70 83.4315 70 100C70 116.569 83.4315 130 100 130C116.569 130 130 116.569 130 100C130 83.4315 116.569 70 100 70ZM100 120C89.0589 120 80 110.941 80 100C80 89.0589 89.0589 80 100 80C110.941 80 120 89.0589 120 100C120 110.941 110.941 120 100 120Z" fill="#475569"/>
+  <path d="M100 80V86" stroke="#475569" stroke-width="6" stroke-linecap="round">
+    <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 100 100" to="360 100 100" dur="1s" repeatCount="indefinite"/>
+  </path>
+  <text x="100" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#475569">טוען...</text>
+</svg>
