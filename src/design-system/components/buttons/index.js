@@ -1,5 +1,6 @@
 /**
  * ייצוא מרוכז של כל רכיבי הכפתורים במערכת
  */
-export { default as Button } from './Button';
+import { Button } from './Button';
+export { Button };
 export { default as IconButton } from './IconButton';
