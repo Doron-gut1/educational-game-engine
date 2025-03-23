@@ -4,15 +4,17 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableItem } from './DraggableItem';
 import { DropZone } from './DropZone';
-import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
-import HintsPanel from '../../components/ui/HintsPanel';  // רכיב חדש - שינוי מהייבוא הקודם
-import SourceReference from '../../components/ui/SourceReference';  // רכיב חדש - שינוי מהייבוא הקודם
-import LearningPopup from '../../components/ui/LearningPopup';  // רכיב חדש - שינוי מהייבוא הקודם
 
 // ייבוא מערכת העיצוב החדשה
-import { Button } from '../../design-system/components';
+import { 
+  Button, 
+  ProgressTracker, 
+  HintsPanel, 
+  SourceReference, 
+  LearningPopup 
+} from '../../design-system/components';
 
 /**
  * משחק גרירה והשלכה
@@ -217,10 +219,12 @@ export function DragDropGame({
           <p className="text-gray-600">{description}</p>
         )}
         
-        <ProgressBar 
-          value={countDroppedItems} 
-          max={items.length} 
-          color="primary" 
+        <ProgressTracker
+          stages={Array.from({ length: items.length }, (_, i) => ({ id: `item${i}`, title: `פריט ${i+1}` }))}
+          currentStageId="item0"
+          progressValue={countDroppedItems}
+          progressMax={items.length}
+          variant="progress-only"
         />
         
         {/* מקור ורפרנס */}
