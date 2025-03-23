@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="150px" height="150px" viewBox="0 0 150 150" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Item Placeholder</title>
+    <g id="Item-Placeholder" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#F59E0B" x="0" y="0" width="150" height="150" rx="10"></rect>
+        <g id="Box" transform="translate(30.000000, 30.000000)" fill="#FFFFFF">
+            <rect id="Base" x="0" y="30" width="90" height="60" rx="5"></rect>
+            <polygon id="Top" points="0 30 45 0 90 30"></polygon>
+        </g>
+        <text id="Item" font-family="Arial-BoldMT, Arial" font-size="16" font-weight="bold" fill="#7C2D12">
+            <tspan x="60" y="118">Item</tspan>
+        </text>
+    </g>
+</svg>
