@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+// ייבוא react-beautiful-dnd נמחק - נשתמש בפתרון חלופי פשוט יותר
 import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';
@@ -15,10 +15,10 @@ import {
 } from '../../design-system/components';
 
 /**
- * רכיב משחק גרירה והשלכה
+ * רכיב משחק גרירה והשלכה - גרסה פשוטה ללא ספריית react-beautiful-dnd
  * @param {Object} props - פרופס הרכיב
- * @param {Array} props.items - פריטים לגרירה
- * @param {Array} props.dropZones - אזורי יעד להשלכה
+ * @param {Array} props.items - פריטים 
+ * @param {Array} props.dropZones - אזורי יעד
  * @param {Function} props.onComplete - פונקציה שתופעל בסיום המשחק
  * @param {string} props.title - כותרת המשחק
  * @param {number} props.basePoints - נקודות בסיס
@@ -29,7 +29,7 @@ export function DragDropGame({
   items = [],
   dropZones = [],
   onComplete,
-  title = 'גרירה והשלכה',
+  title = 'משחק התאמה',
   basePoints = 15,
   sourceReference = null,
   learningPopup = null
@@ -37,9 +37,10 @@ export function DragDropGame({
   const { state, getAssetPath, handleImageError } = useGameContext();
   const { addScore } = useScoring();
   
-  // מצב המשחק
+  // מצב המשחק - גרסה פשוטה יותר לטובת הדגמה
   const [availableItems, setAvailableItems] = useState([]);
   const [zones, setZones] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -57,7 +58,7 @@ export function DragDropGame({
   
   // אתחול הפריטים והאזורים
   useEffect(() => {
-    // עיבוד הפריטים לגרירה - כולל תמונות אם יש
+    // עיבוד הפריטים לשימוש - כולל תמונות אם יש
     const processedItems = items.map(item => ({
       ...item,
       image: item.image ? getAssetPath(item.image, 'images') : null
@@ -74,52 +75,58 @@ export function DragDropGame({
     setZones(processedZones);
   }, [items, dropZones, getAssetPath]);
   
-  // טיפול בגרירה והשלכה
-  const handleDragEnd = (result) => {
-    const { source, destination } = result;
-    
-    // אם אין יעד או היעד זהה למקור - לא קרה שינוי
-    if (!destination || (source.droppableId === destination.droppableId && 
-                        source.index === destination.index)) {
-      return;
-    }
+  // בחירת פריט להזזה
+  const handleSelectItem = (item) => {
+    setSelectedItem(item);
+  };
+  
+  // השלכת פריט לאזור יעד
+  const handleDropToZone = (zone) => {
+    if (!selectedItem) return;
     
     // העתקת מצב נוכחי
-    let newAvailable = [...availableItems];
-    let newZones = [...zones];
+    const newAvailable = [...availableItems];
+    const newZones = [...zones];
     
-    // גרירה ממאגר הפריטים הזמינים
-    if (source.droppableId === 'available') {
-      // העתקת הפריט
-      const [draggedItem] = newAvailable.splice(source.index, 1);
+    // הסרת הפריט מהפריטים הזמינים
+    const itemIndex = newAvailable.findIndex(i => i.id === selectedItem.id);
+    if (itemIndex !== -1) {
+      const [draggedItem] = newAvailable.splice(itemIndex, 1);
       
       // הוספה לאזור היעד
-      const targetZoneIndex = newZones.findIndex(z => z.id === destination.droppableId);
+      const targetZoneIndex = newZones.findIndex(z => z.id === zone.id);
       if (targetZoneIndex >= 0) {
-        newZones[targetZoneIndex].items.splice(destination.index, 0, draggedItem);
+        newZones[targetZoneIndex].items.push(draggedItem);
       }
-    }
-    // גרירה מאזור אחד לאזור אחר
-    else if (destination.droppableId !== source.droppableId) {
-      // מציאת אזור המקור והיעד
-      const sourceZoneIndex = newZones.findIndex(z => z.id === source.droppableId);
-      const targetZoneIndex = newZones.findIndex(z => z.id === destination.droppableId);
+    } else {
+      // הפריט כבר נמצא באחד האזורים - העברה בין אזורים
+      let foundInZone = false;
       
-      if (sourceZoneIndex >= 0 && targetZoneIndex >= 0) {
-        // העברת הפריט בין האזורים
-        const [draggedItem] = newZones[sourceZoneIndex].items.splice(source.index, 1);
-        newZones[targetZoneIndex].items.splice(destination.index, 0, draggedItem);
+      for (let i = 0; i < newZones.length; i++) {
+        const itemIndexInZone = newZones[i].items.findIndex(item => item.id === selectedItem.id);
+        
+        if (itemIndexInZone !== -1) {
+          const [draggedItem] = newZones[i].items.splice(itemIndexInZone, 1);
+          
+          // הוספה לאזור היעד החדש
+          const targetZoneIndex = newZones.findIndex(z => z.id === zone.id);
+          if (targetZoneIndex >= 0) {
+            newZones[targetZoneIndex].items.push(draggedItem);
+          }
+          
+          foundInZone = true;
+          break;
+        }
+      }
+      
+      if (!foundInZone) {
+        // לא נמצא בשום מקום - מצב שגוי
+        console.error('Item not found in any zone:', selectedItem);
       }
     }
-    // סידור מחדש באותו אזור
-    else {
-      const zoneIndex = newZones.findIndex(z => z.id === source.droppableId);
-      if (zoneIndex >= 0) {
-        // סידור מחדש בתוך האזור
-        const [draggedItem] = newZones[zoneIndex].items.splice(source.index, 1);
-        newZones[zoneIndex].items.splice(destination.index, 0, draggedItem);
-      }
-    }
+    
+    // ניקוי הבחירה
+    setSelectedItem(null);
     
     // עדכון המצב
     setAvailableItems(newAvailable);
@@ -146,6 +153,39 @@ export function DragDropGame({
       setIsComplete(true);
       setShowFeedback(true);
     }
+  };
+  
+  // החזרת פריט לרשימת הפריטים הזמינים
+  const handleReturnToAvailable = (item) => {
+    // העתקת מצב נוכחי
+    const newAvailable = [...availableItems];
+    const newZones = [...zones];
+    
+    // מציאת האזור שבו נמצא הפריט
+    let foundInZone = false;
+    
+    for (let i = 0; i < newZones.length; i++) {
+      const itemIndexInZone = newZones[i].items.findIndex(zoneItem => zoneItem.id === item.id);
+      
+      if (itemIndexInZone !== -1) {
+        const [draggedItem] = newZones[i].items.splice(itemIndexInZone, 1);
+        
+        // החזרה לרשימת הפריטים הזמינים
+        newAvailable.push(draggedItem);
+        
+        foundInZone = true;
+        break;
+      }
+    }
+    
+    if (!foundInZone) {
+      console.error('Item not found in any zone:', item);
+    }
+    
+    // עדכון המצב
+    setAvailableItems(newAvailable);
+    setZones(newZones);
+    setSelectedItem(null);
   };
   
   // לחיצה על כפתור ההמשך
@@ -213,115 +253,109 @@ export function DragDropGame({
         />
       )}
       
-      <DragDropContext onDragEnd={handleDragEnd}>
-        {/* אזור הפריטים הזמינים */}
-        <Droppable droppableId="available" direction="horizontal">
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className={`p-4 min-h-16 rounded border-2 ${
-                snapshot.isDraggingOver ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
-              } flex flex-wrap gap-4 mb-6`}
-            >
-              {availableItems.map((item, index) => (
-                <Draggable key={item.id} draggableId={item.id} index={index}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      className={`p-3 rounded border cursor-pointer ${
-                        snapshot.isDragging ? 'bg-blue-100 shadow-lg' : 'bg-white'
-                      }`}
-                    >
-                      {item.image ? (
-                        <div className="flex flex-col items-center text-center">
-                          <img 
-                            src={item.image} 
-                            alt={item.text || "פריט"} 
-                            className="h-16 w-auto object-contain mb-2" 
-                            onError={handleImageError}
-                          />
-                          <span>{item.text}</span>
-                        </div>
-                      ) : (
-                        <span>{item.text}</span>
-                      )}
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-              {availableItems.length === 0 && !isComplete && (
-                <div className="text-gray-500 p-2">גרור את כל הפריטים לאזורים המתאימים</div>
-              )}
-            </div>
-          )}
-        </Droppable>
-        
-        {/* אזורי היעד */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {zones.map((zone) => (
-            <Card key={zone.id} className="relative overflow-hidden">
-              <h3 className="text-lg font-bold mb-2">{zone.title}</h3>
-              {zone.image && (
+      {/* התקדמות - כמה פריטים מוקמו */}
+      <ProgressTracker 
+        stages={items.map((item, idx) => ({ id: item.id, title: `פריט ${idx+1}` }))}
+        currentStageId={null}
+        completedStages={items.map(item => item.id).filter(itemId => 
+          !availableItems.some(availItem => availItem.id === itemId)
+        )}
+        compact={true}
+      />
+      
+      {/* אזור הפריטים הזמינים */}
+      <div className="p-4 min-h-16 rounded border-2 border-gray-200 flex flex-wrap gap-4 mb-6">
+        {availableItems.map((item) => (
+          <div
+            key={item.id}
+            onClick={() => handleSelectItem(item)}
+            className={`p-3 rounded border cursor-pointer ${
+              selectedItem && selectedItem.id === item.id ? 'bg-blue-100 shadow-lg' : 'bg-white'
+            }`}
+          >
+            {item.image ? (
+              <div className="flex flex-col items-center text-center">
                 <img 
-                  src={zone.image} 
-                  alt={zone.title || "אזור"} 
-                  className="h-32 w-full object-cover mb-3 rounded" 
+                  src={item.image} 
+                  alt={item.text || "פריט"} 
+                  className="h-16 w-auto object-contain mb-2" 
                   onError={handleImageError}
                 />
+                <span>{item.text}</span>
+              </div>
+            ) : (
+              <span>{item.text}</span>
+            )}
+          </div>
+        ))}
+        {availableItems.length === 0 && !isComplete && (
+          <div className="text-gray-500 p-2">גרור את כל הפריטים לאזורים המתאימים</div>
+        )}
+      </div>
+      
+      {/* אזורי היעד */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {zones.map((zone) => (
+          <Card key={zone.id} className="relative overflow-hidden">
+            <h3 className="text-lg font-bold mb-2">{zone.title}</h3>
+            {zone.image && (
+              <img 
+                src={zone.image} 
+                alt={zone.title || "אזור"} 
+                className="h-32 w-full object-cover mb-3 rounded" 
+                onError={handleImageError}
+              />
+            )}
+            
+            <div 
+              className={`min-h-24 p-3 rounded border-2 ${
+                selectedItem ? 'border-green-300 bg-green-50' : 'border-gray-200'
+              }`}
+              onClick={() => selectedItem && handleDropToZone(zone)}
+            >
+              {zone.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3 rounded border mb-2 last:mb-0 bg-white cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectItem(item);
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    handleReturnToAvailable(item);
+                  }}
+                >
+                  {item.image ? (
+                    <div className="flex flex-col items-center text-center">
+                      <img 
+                        src={item.image} 
+                        alt={item.text || "פריט"} 
+                        className="h-16 w-auto object-contain mb-2" 
+                        onError={handleImageError}
+                      />
+                      <span>{item.text}</span>
+                    </div>
+                  ) : (
+                    <span>{item.text}</span>
+                  )}
+                </div>
+              ))}
+              {zone.items.length === 0 && (
+                <div className="text-gray-400 p-2">
+                  {selectedItem ? 'לחץ כאן כדי להניח את הפריט' : 'לחץ על פריט ואז על אזור זה כדי להניחו'}
+                </div>
               )}
-              
-              <Droppable droppableId={zone.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-h-24 p-3 rounded border-2 ${
-                      snapshot.isDraggingOver ? 'border-green-300 bg-green-50' : 'border-gray-200'
-                    }`}
-                  >
-                    {zone.items.map((item, index) => (
-                      <Draggable key={item.id} draggableId={item.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`p-3 rounded border mb-2 last:mb-0 ${
-                              snapshot.isDragging ? 'bg-blue-100 shadow-lg' : 'bg-white'
-                            }`}
-                          >
-                            {item.image ? (
-                              <div className="flex flex-col items-center text-center">
-                                <img 
-                                  src={item.image} 
-                                  alt={item.text || "פריט"} 
-                                  className="h-16 w-auto object-contain mb-2" 
-                                  onError={handleImageError}
-                                />
-                                <span>{item.text}</span>
-                              </div>
-                            ) : (
-                              <span>{item.text}</span>
-                            )}
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    {zone.items.length === 0 && (
-                      <div className="text-gray-400 p-2">גרור פריטים לכאן</div>
-                    )}
-                  </div>
-                )}
-              </Droppable>
-            </Card>
-          ))}
-        </div>
-      </DragDropContext>
+            </div>
+          </Card>
+        ))}
+      </div>
+      
+      {/* הוראות שימוש */}
+      <div className="bg-blue-50 p-3 rounded-lg text-sm">
+        <p><strong>הוראות:</strong> לחץ על פריט כדי לבחור אותו, ואז לחץ על האזור המתאים כדי להניח אותו שם.</p>
+        <p>לחיצה כפולה על פריט שכבר מוקם תחזיר אותו לרשימת הפריטים הזמינים.</p>
+      </div>
       
       {/* פאנל רמזים */}
       <HintsPanel 
