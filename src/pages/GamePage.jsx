@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GameEngine } from '../core/engine/GameEngine';
 import { LoggerService, AssetManager } from '../services';
+import { GameEngine } from '../core/engine/GameEngine';
 
-// רכיבי משחק מותאמים לפי סוג
+// רכיבי משחק מודולריים
 import { MultiChoiceGame } from '../modules/multiChoice/MultiChoiceGame';
 import { DragDropGame } from '../modules/dragAndDrop/DragDropGame';
 import { MatchingGame } from '../modules/matching/MatchingGame';
-// יש לייבא מודולים נוספים בהתאם לצורך
+// מודולים נוספים יתווספו בהמשך
 
 // ייבוא מערכת העיצוב החדשה
 import { ThemeProvider } from '../design-system/ThemeProvider';
@@ -15,12 +15,10 @@ import { ThemeProvider } from '../design-system/ThemeProvider';
 // רכיבי מערכת עיצוב
 import { 
   Button, 
-  ScrollCard,
   GlassCard,
+  ScrollCard,
   JourneyMap,
-  ProgressTracker,
-  PageContainer,
-  GameContainer
+  LoadingIndicator
 } from '../design-system/components';
 
 export function GamePage() {
@@ -32,49 +30,73 @@ export function GamePage() {
   const [completedStages, setCompletedStages] = useState([]);
   const [error, setError] = useState(null);
   const [backgroundPath, setBackgroundPath] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   // טיפול בסיום משחק
-  const handleGameComplete = (finalScore) => {
+  const handleGameComplete = useCallback((finalScore) => {
     LoggerService.info(`Game completed with score: ${finalScore}`);
     // אפשרות להצגת חלון סיכום או ניווט לדף הבית
     navigate('/');
-  };
+  }, [navigate]);
   
   // טיפול בשגיאת טעינה
-  const handleLoadError = (error) => {
+  const handleLoadError = useCallback((error) => {
     LoggerService.error('Error loading game:', error);
-    setError('שגיאה בטעינת המשחק');
-  };
+    setError('שגיאה בטעינת המשחק: ' + (error.message || 'לא ידוע'));
+    setLoading(false);
+  }, []);
+  
+  // איפוס טיימאאוט הטעינה - למקרה שהטעינה תקועה
+  useEffect(() => {
+    // טיימר לבדיקת טעינה תקועה
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoadingTimeout(true);
+        LoggerService.warn('Loading timeout occurred');
+      }
+    }, 10000); // 10 שניות
+    
+    return () => clearTimeout(timeout);
+  }, [loading]);
   
   // טיפול בטעינת משחק
-  const handleGameLoad = (data) => {
-    setGameData(data);
-    
-    // עדכון רקע ראשוני
-    if (gameId && data?.content?.stages) {
-      const initialStage = data.content.stages[0];
+  const handleGameLoad = useCallback((data) => {
+    try {
+      setGameData(data);
       
-      if (initialStage) {
-        setCurrentStage(initialStage);
+      // עדכון רקע ראשוני
+      if (gameId && data?.content?.stages) {
+        const initialStage = data.content.stages[0];
         
-        // עדכון רקע אם קיים
-        if (initialStage.background) {
-          setBackgroundPath(AssetManager.getAssetPath(gameId, initialStage.background, 'backgrounds'));
-        } else {
-          // אם אין רקע ספציפי לשלב, לקחת את רקע ברירת המחדל של המשחק
-          setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
+        if (initialStage) {
+          setCurrentStage(initialStage);
+          
+          // עדכון רקע אם קיים
+          if (initialStage.background) {
+            setBackgroundPath(AssetManager.getAssetPath(gameId, initialStage.background, 'backgrounds'));
+          } else {
+            // אם אין רקע ספציפי לשלב, לקחת את רקע ברירת המחדל של המשחק
+            setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
+          }
         }
       }
+      
+      // טעינה מקדימה של נכסים
+      if (gameId) {
+        AssetManager.preloadEssentialAssets(gameId).catch(err => {
+          LoggerService.warn("טעינה מוקדמת של נכסים נכשלה:", err);
+          // ממשיכים למרות השגיאה כדי לאפשר למשחק לפעול
+        });
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      LoggerService.error('Error processing game data:', error);
+      setError('שגיאה בעיבוד נתוני המשחק');
+      setLoading(false);
     }
-    
-    // טעינה מקדימה של נכסים
-    if (gameId) {
-      AssetManager.preloadEssentialAssets(gameId).catch(err => {
-        LoggerService.warn("טעינה מוקדמת של נכסים נכשלה:", err);
-        // ממשיכים למרות השגיאה כדי לאפשר למשחק לפעול
-      });
-    }
-  };
+  }, [gameId]);
   
   // טיפול בשינוי שלב נוכחי
   useEffect(() => {
@@ -84,75 +106,130 @@ export function GamePage() {
   }, [currentStage, gameId]);
   
   // טיפול בהשלמת שלב
-  const handleStageComplete = (stageId, score) => {
+  const handleStageComplete = useCallback((stageId, score) => {
     LoggerService.info(`Stage ${stageId} completed with score: ${score}`);
     
     // עדכון רשימת השלבים שהושלמו
-    if (!completedStages.includes(stageId)) {
-      setCompletedStages(prev => [...prev, stageId]);
-    }
+    setCompletedStages(prev => {
+      if (prev.includes(stageId)) {
+        return prev;
+      }
+      return [...prev, stageId];
+    });
     
     // מעבר לשלב הבא
-    if (gameData && gameData.content.stages) {
-      const currentIndex = gameData.content.stages.findIndex(s => s.id === stageId);
-      
-      if (currentIndex >= 0 && currentIndex < gameData.content.stages.length - 1) {
-        setCurrentStage(gameData.content.stages[currentIndex + 1]);
-      } else {
-        // סיום המשחק
-        handleGameComplete(score);
+    setGameData(prevData => {
+      if (prevData && prevData.content.stages) {
+        const currentIndex = prevData.content.stages.findIndex(s => s.id === stageId);
+        
+        if (currentIndex >= 0 && currentIndex < prevData.content.stages.length - 1) {
+          // עדכון השלב הנוכחי
+          const nextStage = prevData.content.stages[currentIndex + 1];
+          setCurrentStage(nextStage);
+          return prevData;
+        } else {
+          // סיום המשחק
+          handleGameComplete(score);
+          return prevData;
+        }
       }
-    }
-  };
+      return prevData;
+    });
+  }, [handleGameComplete]);
   
-  // רנדור רכיב המשחק לפי סוג
-  const renderGameModule = (stage) => {
-    if (!stage) return null;
+  // רנדור רכיב המשחק לפי סוג - עם useMemo למניעת רינדורים מיותרים
+  const gameModuleComponent = useMemo(() => {
+    if (!currentStage) return null;
     
-    switch (stage.type) {
+    switch (currentStage.type) {
       case 'multi_choice':
         return (
           <MultiChoiceGame
-            questions={stage.questions}
-            title={stage.title}
-            onComplete={(score) => handleStageComplete(stage.id, score)}
-            basePoints={stage.basePoints || 10}
-            sourceReference={stage.sourceReference}
-            learningPopup={stage.learningPopup}
+            questions={currentStage.questions}
+            title={currentStage.title}
+            onComplete={(score) => handleStageComplete(currentStage.id, score)}
+            basePoints={currentStage.basePoints || 10}
+            sourceReference={currentStage.sourceReference}
+            learningPopup={currentStage.learningPopup}
           />
         );
       case 'drag_drop':
         return (
           <DragDropGame
-            items={stage.items}
-            dropZones={stage.dropZones}
-            title={stage.title}
-            onComplete={(score) => handleStageComplete(stage.id, score)}
-            basePoints={stage.basePoints || 15}
-            sourceReference={stage.sourceReference}
-            learningPopup={stage.learningPopup}
+            items={currentStage.items}
+            dropZones={currentStage.dropZones}
+            title={currentStage.title}
+            onComplete={(score) => handleStageComplete(currentStage.id, score)}
+            basePoints={currentStage.basePoints || 15}
+            sourceReference={currentStage.sourceReference}
+            learningPopup={currentStage.learningPopup}
           />
         );
       case 'matching':
         return (
           <MatchingGame
-            pairs={stage.pairs}
-            title={stage.title}
-            onComplete={(score) => handleStageComplete(stage.id, score)}
-            basePoints={stage.basePoints || 15}
-            sourceReference={stage.sourceReference}
-            learningPopup={stage.learningPopup}
+            pairs={currentStage.pairs}
+            title={currentStage.title}
+            onComplete={(score) => handleStageComplete(currentStage.id, score)}
+            basePoints={currentStage.basePoints || 15}
+            sourceReference={currentStage.sourceReference}
+            learningPopup={currentStage.learningPopup}
           />
         );
-      // חובה לטפל בסוגים נוספים בהתאם לצורך
-        
+      case 'multi_stage':
+        // טיפול במשחק מרובה-שלבים
+        const currentChallenge = currentStage.challenges?.[0];
+        if (!currentChallenge) {
+          return <div>שגיאה: לא נמצאו אתגרים בשלב זה</div>;
+        }
+
+        // החזרת הרכיב המתאים לסוג האתגר
+        switch (currentChallenge.type) {
+          case 'multi_choice':
+            return (
+              <MultiChoiceGame
+                questions={currentChallenge.questions}
+                title={currentChallenge.title}
+                onComplete={(score) => handleStageComplete(currentStage.id, score)}
+                basePoints={currentChallenge.basePoints || 10}
+                sourceReference={currentChallenge.sourceReference}
+                learningPopup={currentStage.learningPopup}
+              />
+            );
+          case 'drag_drop':
+            return (
+              <DragDropGame
+                items={currentChallenge.items}
+                dropZones={currentChallenge.dropZones}
+                title={currentChallenge.title}
+                onComplete={(score) => handleStageComplete(currentStage.id, score)}
+                basePoints={currentChallenge.basePoints || 15}
+                sourceReference={currentChallenge.sourceReference}
+                learningPopup={currentStage.learningPopup}
+              />
+            );
+          case 'matching':
+            return (
+              <MatchingGame
+                pairs={currentChallenge.pairs}
+                title={currentChallenge.title}
+                onComplete={(score) => handleStageComplete(currentStage.id, score)}
+                basePoints={currentChallenge.basePoints || 15}
+                sourceReference={currentChallenge.sourceReference}
+                learningPopup={currentStage.learningPopup}
+              />
+            );
+          default:
+            return <div>סוג אתגר לא נתמך: {currentChallenge.type}</div>;
+        }
+      
       default:
-        return <div>סוג משחק לא נתמך: {stage.type}</div>;
+        return <div>סוג משחק לא נתמך: {currentStage.type}</div>;
     }
-  };
+  }, [currentStage, handleStageComplete]);
   
   // רנדור רקע דינמי
-  const getBackgroundStyle = () => {
+  const getBackgroundStyle = useCallback(() => {
     if (backgroundPath) {
       return {
         backgroundImage: `url(${backgroundPath})`,
@@ -166,10 +243,10 @@ export function GamePage() {
     return {
       backgroundImage: 'linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%)'
     };
-  };
+  }, [backgroundPath]);
   
   // מיפוי שלבים למפת מסע
-  const getStagesForJourneyMap = () => {
+  const stagesForJourneyMap = useMemo(() => {
     if (!gameData || !gameData.content || !gameData.content.stages) {
       return [];
     }
@@ -197,22 +274,43 @@ export function GamePage() {
     }
     
     return stages;
+  }, [gameData]);
+  
+  // ניסיון נוסף במקרה של תקיעה
+  const handleRetryLoading = () => {
+    // איפוס מצב הטעינה
+    setLoading(true);
+    setLoadingTimeout(false);
+    setError(null);
+    
+    // טעינה מחדש של המשחק
+    setTimeout(() => {
+      // כאן אנחנו מסתמכים על כך שGameEngine יבצע טעינה חדשה
+      // בגלל שהקומפוננטה תרונדר מחדש
+      setLoading(false);
+    }, 100);
   };
   
   // טיפול בשגיאות תמונה
   const handleImageError = (e) => {
     e.target.onerror = null;
-    e.target.src = '/assets/shared/placeholders/loading_placeholder.svg';
+    e.target.src = '/assets/shared/placeholders/background_placeholder.svg';
+  };
+  
+  // בחירת נושא לפי משחק
+  const getTheme = () => {
+    if (gameData?.theme) {
+      return gameData.theme;
+    }
+    
+    // ברירת מחדל לפי מזהה המשחק
+    return gameId || 'base';
   };
   
   return (
-    <GameEngine
-      gameId={gameId}
-      onGameLoad={handleGameLoad}
-      onError={handleLoadError}
-    >
-      <PageContainer 
-        className="min-h-screen"
+    <ThemeProvider theme={getTheme()}>
+      <div
+        className="min-h-screen flex flex-col"
         style={getBackgroundStyle()}
       >
         {error ? (
@@ -222,26 +320,48 @@ export function GamePage() {
             <Button
               onClick={() => navigate('/')}
               variant="secondary"
+              className="mb-4"
             >
               חזרה לדף הבית
             </Button>
+            
+            <Button 
+              onClick={handleRetryLoading}
+              variant="primary"
+            >
+              נסה שוב
+            </Button>
           </GlassCard>
-        ) : !gameData ? (
+        ) : loading || !gameData ? (
           <div className="flex h-screen items-center justify-center">
-            <div className="text-center">
-              <div className="loading-scroll animate-pulse-soft">
-                <img 
-                  src="/assets/shared/placeholders/loading_placeholder.svg" 
-                  alt="טוען..." 
-                  className="w-20 h-20 mx-auto"
-                  onError={handleImageError}
-                />
-              </div>
-              <p className="mt-4 text-white">טוען משחק...</p>
-            </div>
+            <GlassCard className="p-10 text-center">
+              <LoadingIndicator 
+                type="scroll" 
+                size="large" 
+                color="accent" 
+                text="טוען משחק..." 
+              />
+              
+              {loadingTimeout && (
+                <div className="mt-6">
+                  <p className="text-amber-600 mb-4">הטעינה לוקחת זמן רב מהצפוי.</p>
+                  <Button 
+                    onClick={handleRetryLoading}
+                    variant="primary"
+                  >
+                    נסה שוב
+                  </Button>
+                </div>
+              )}
+            </GlassCard>
           </div>
         ) : (
-          <>
+          // חלק משחק פעיל
+          <GameEngine
+            gameId={gameId}
+            onGameLoad={handleGameLoad}
+            onError={handleLoadError}
+          >
             <header className="bg-black bg-opacity-50 p-4 border-b border-white/10 sticky top-0 z-10">
               <div className="container mx-auto flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-white">{gameData.name}</h1>
@@ -255,20 +375,22 @@ export function GamePage() {
               </div>
             </header>
             
-            {gameData.content.stages && (
+            {gameData.content?.stages && stagesForJourneyMap.length > 0 && (
               <div className="container mx-auto my-4 px-4">
                 <JourneyMap 
-                  stages={getStagesForJourneyMap()}
+                  stages={stagesForJourneyMap}
                   currentStage={currentStage?.id}
                   completedStages={completedStages}
                   onStageClick={(stageId) => {
                     // מעבר לשלב רק אם כבר הושלם
                     if (completedStages.includes(stageId)) {
-                      const stage = [
-                        ...gameData.content.stages,
+                      const allStages = [
+                        ...(gameData.content.stages || []),
                         gameData.content.intro,
                         gameData.content.outro
-                      ].find(s => s?.id === stageId);
+                      ].filter(Boolean);
+                      
+                      const stage = allStages.find(s => s?.id === stageId);
                       
                       if (stage) {
                         setCurrentStage(stage);
@@ -279,27 +401,44 @@ export function GamePage() {
               </div>
             )}
             
-            <main className="container mx-auto p-4 pt-6">
-              <ScrollCard className="bg-white/95 backdrop-blur-md">
+            <main className="container mx-auto p-4 pt-6 flex-grow">
+              <ScrollCard className="p-8">
                 {currentStage && (
                   <>
                     <h2 className="text-3xl font-bold mb-6 text-gray-800 border-b pb-2">
                       {currentStage.title}
                     </h2>
                     
-                    {renderGameModule(currentStage)}
+                    {currentStage.description && (
+                      <p className="mb-6 text-gray-700">{currentStage.description}</p>
+                    )}
+                    
+                    {/* הצגת דמות מדברת אם יש */}
+                    {currentStage.character && currentStage.introDialogue && (
+                      <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        {currentStage.introDialogue.map((dialogue, index) => (
+                          <div key={index} className="mb-3 last:mb-0">
+                            <strong className="text-amber-800">{dialogue.character}: </strong>
+                            <span>{dialogue.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* רכיב המשחק הדינמי */}
+                    {gameModuleComponent}
                   </>
                 )}
               </ScrollCard>
             </main>
             
-            <footer className="bg-black bg-opacity-50 p-4 text-center text-blue-300 text-sm border-t border-white/10 mt-auto">
+            <footer className="bg-black bg-opacity-50 p-4 text-center text-blue-300 text-sm border-t border-white/10">
               &copy; {gameData.name} - משחק אינטראקטיבי
             </footer>
-          </>
+          </GameEngine>
         )}
-      </PageContainer>
-    </GameEngine>
+      </div>
+    </ThemeProvider>
   );
 }
 
