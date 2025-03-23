@@ -35,15 +35,15 @@ export function HomePage() {
             id: 'passover',
             name: 'המסע לחירות',
             description: 'משחק פסח אינטראקטיבי על מסע יציאת מצרים',
-            thumbnail: AssetManager.getAssetPath('passover', 'thumbnail.svg', 'backgrounds'),
+            thumbnail: '/assets/games/passover/backgrounds/thumbnail.svg',
             active: true,
             theme: 'passover'
           },
           {
             id: 'tubishvat',
-            name: 'חגיגת ט\"ו בשבט',
-            description: 'משחק בנושא ט\"ו בשבט ושבעת המינים',
-            thumbnail: AssetManager.getAssetPath('tubishvat', 'thumbnail.jpg', 'backgrounds'),
+            name: 'חגיגת ט\\"ו בשבט',
+            description: 'משחק בנושא ט\\"ו בשבט ושבעת המינים',
+            thumbnail: '/assets/games/tubishvat/backgrounds/thumbnail.svg',
             active: false,
             theme: 'tubishvat'
           }
@@ -52,10 +52,10 @@ export function HomePage() {
         // שילוב של המשחקים מהמערכת והמשחקים הקבועים
         const allGames = games.length > 0 ? games : defaultGames;
         
-        // הוספת נתיבים לתמונות ממוזערות
+        // הוספת נתיבים מלאים לתמונות ממוזערות
         const gamesWithThumbnails = allGames.map(game => ({
           ...game,
-          thumbnail: game.thumbnail || AssetManager.getAssetPath(game.id, 'thumbnail.svg', 'backgrounds')
+          thumbnail: game.thumbnail || `/assets/games/${game.id}/backgrounds/thumbnail.svg`
         }));
         
         setAvailableGames(gamesWithThumbnails);
@@ -141,10 +141,16 @@ function GameCard({ game, active = true }) {
   // עיצוב מותאם לפי משחק
   const gameTheme = game.theme || game.id;
   
+  // המרת וריאנטים לא תקינים לברירת מחדל 
+  const getValidVariant = (theme) => {
+    const validVariants = ['default', 'primary', 'secondary', 'accent', 'translucent', 'passover', 'tubishvat'];
+    return validVariants.includes(theme) ? theme : 'default';
+  };
+  
   if (!active) {
     return (
       <Card 
-        variant={gameTheme}
+        variant={getValidVariant(gameTheme)}
         shadow="medium"
         className="h-full flex flex-col overflow-hidden border hover:shadow-xl transition-all duration-300 filter grayscale opacity-60"
       >
@@ -186,7 +192,7 @@ function GameCard({ game, active = true }) {
   
   return (
     <Card 
-      variant={gameTheme}
+      variant={getValidVariant(gameTheme)}
       shadow="large"
       className="h-full flex flex-col overflow-hidden border-2 transition-all duration-300 transform hover:scale-105"
       hoverable={true}
