@@ -108,7 +108,6 @@ export function HomePage() {
 function GameCard({ game, active = true }) {
   // בחירת הצבעים לפי נושא המשחק
   let cardStyle = {};
-  let buttonVariant = "primary";
   
   switch (game.id) {
     case 'passover':
@@ -116,14 +115,12 @@ function GameCard({ game, active = true }) {
         backgroundImage: 'linear-gradient(135deg, #4338CA11 0%, #0284C722 100%)',
         borderColor: '#4338CA33'
       };
-      buttonVariant = "passover";
       break;
     case 'tubishvat':
       cardStyle = {
         backgroundImage: 'linear-gradient(135deg, #16A34A11 0%, #65A30D22 100%)',
         borderColor: '#16A34A33'
       };
-      buttonVariant = "tubishvat";
       break;
     default:
       cardStyle = {
@@ -175,7 +172,7 @@ function GameCard({ game, active = true }) {
   
   return (
     <Card 
-      className="h-full flex flex-col overflow-hidden border hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:rotate-1" 
+      className="h-full flex flex-col overflow-hidden border hover:shadow-xl transition-all duration-300 transform hover:scale-105" 
       style={cardStyle}
     >
       <div className="h-48 overflow-hidden relative">
@@ -201,17 +198,10 @@ function GameCard({ game, active = true }) {
       
       <div className="p-6 pt-0 mt-auto">
         <Link to={`/game/${game.id}`} className="w-full block">
-          <Button variant={buttonVariant} className="w-full transform transition-all hover:shadow-lg">
+          <Button variant="primary" className="w-full transform transition-all hover:shadow-lg">
             התחל מסע
           </Button>
         </Link>
-      </div>
-      
-      {/* איקון חץ - קטן יותר והותאם פרופורציונית */}
-      <div className="absolute bottom-3 left-3 text-amber-300/70 transition-all opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
       </div>
     </Card>
   );
