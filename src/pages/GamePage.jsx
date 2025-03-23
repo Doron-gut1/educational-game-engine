@@ -9,6 +9,9 @@ import { DragDropGame } from '../modules/dragAndDrop/DragDropGame';
 import { MatchingGame } from '../modules/matching/MatchingGame';
 // יש לייבא מודולים נוספים בהתאם לצורך
 
+// ייבוא מערכת העיצוב החדשה
+import { ThemeProvider } from '../design-system/ThemeProvider';
+
 // רכיבי מערכת עיצוב
 import { 
   Button, 
@@ -196,6 +199,12 @@ export function GamePage() {
     return stages;
   };
   
+  // טיפול בשגיאות תמונה
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    e.target.src = '/assets/shared/placeholders/loading_placeholder.svg';
+  };
+  
   return (
     <GameEngine
       gameId={gameId}
@@ -222,10 +231,10 @@ export function GamePage() {
             <div className="text-center">
               <div className="loading-scroll animate-pulse-soft">
                 <img 
-                  src="/assets/shared/ui/loading-scroll.svg" 
+                  src="/assets/shared/placeholders/loading_placeholder.svg" 
                   alt="טוען..." 
                   className="w-20 h-20 mx-auto"
-                  onError={(e) => AssetManager.handleImageError(e, 'images')}
+                  onError={handleImageError}
                 />
               </div>
               <p className="mt-4 text-white">טוען משחק...</p>
