@@ -1,7 +1,7 @@
 /**
  * ייצוא מרוכז של כל רכיבי הכרטיסים במערכת
  */
-import Card from './Card';
+import { Card } from './Card';
 import ScrollCard from './ScrollCard';
 import GlassCard from './GlassCard';
 
