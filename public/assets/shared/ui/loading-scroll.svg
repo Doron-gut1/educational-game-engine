@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100px" height="100px" viewBox="0 0 100 100" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Loading Scroll</title>
+    <g id="Loading-Scroll" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Scroll" transform="translate(10.000000, 5.000000)">
+            <rect id="Background" fill="#F0E6D2" x="0" y="10" width="80" height="70" rx="5"></rect>
+            <path d="M0,10 L0,10 L0,75 C0,77.7614 2.23858,80 5,80 L75,80 C77.7614,80 80,77.7614 80,75 L80,10 L80,10 L0,10 Z" id="Shadow" fill="#E6D5B8"></path>
+            <path d="M5,10 L75,10 L75,0 C75,-2.41483 73.0148,-4.4 70.6,-4.4 L9.4,-4.4 C6.98516,-4.4 5,-2.41483 5,0 L5,10 Z" id="Top-Roll" fill="#A47449"></path>
+            <path d="M5,80 L75,80 L75,90 C75,92.4148 73.0148,94.4 70.6,94.4 L9.4,94.4 C6.98516,94.4 5,92.4148 5,90 L5,80 Z" id="Bottom-Roll" fill="#A47449"></path>
+            <g id="Text-Lines" transform="translate(15.000000, 20.000000)" fill="#A47449">
+                <rect x="0" y="0" width="50" height="3" rx="1.5"></rect>
+                <rect x="0" y="10" width="50" height="3" rx="1.5"></rect>
+                <rect x="0" y="20" width="50" height="3" rx="1.5"></rect>
+                <rect x="0" y="30" width="30" height="3" rx="1.5"></rect>
+                <rect x="0" y="40" width="40" height="3" rx="1.5"></rect>
+            </g>
+        </g>
+        
+        <!-- Animation definitions -->
+        <style type="text/css">
+            @keyframes rotate {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            
+            @keyframes pulse {
+                0%, 100% { opacity: 0.4; }
+                50% { opacity: 0.9; }
+            }
+            
+            #Loading-Scroll {
+                animation: pulse 2s infinite;
+            }
+            
+            #Scroll {
+                transform-origin: center;
+                animation: rotate 3s infinite linear;
+            }
+        </style>
+    </g>
+</svg>
