@@ -20,6 +20,23 @@ export function HomePage() {
   const [games, setGames] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [debugInfo, setDebugInfo] = useState({});
+
+  // דיבוג נוסף לבדיקת Tailwind
+  useEffect(() => {
+    setTimeout(() => {
+      console.log("====== DEBUG INFO ======");
+      console.log("Games state:", games);
+      console.log("Tailwind test:", document.querySelector('.bg-blue-500') ? "Working" : "Not working");
+      
+      // שמירת מידע דיבוג למצב
+      setDebugInfo({
+        gamesCount: games.length,
+        tailwindTest: document.querySelector('.bg-blue-500') ? "Working" : "Not working",
+        timestamp: new Date().toISOString()
+      });
+    }, 1000);
+  }, [games]);
 
   // טעינת משחקים זמינים
   useEffect(() => {
@@ -28,10 +45,16 @@ export function HomePage() {
       
       try {
         // טעינת המשחקים מהמודול או שימוש בנתוני ברירת מחדל
+        console.log("Loading games module...");
         const gamesModule = await import('../games/index.js')
-          .catch(() => ({ availableGames: [] }));
+          .catch((err) => {
+            console.error("Failed to import games module:", err);
+            return { availableGames: [] };
+          });
           
+        console.log("Games module loaded:", gamesModule);
         const availableGames = gamesModule.availableGames || [];
+        console.log("Available games:", availableGames);
         
         // משחקי ברירת מחדל במקרה שאין מספיק משחקים
         const defaultGames = [
@@ -39,7 +62,7 @@ export function HomePage() {
             id: 'passover',
             name: 'המסע לחירות',
             description: 'משחק אינטראקטיבי בנושא פסח ויציאת מצרים',
-            thumbnail: '/assets/games/passover/backgrounds/thumbnail.jpg',
+            thumbnail: '/assets/games/passover/backgrounds/thumbnail.svg',
             active: true,
             theme: 'passover'
           },
@@ -47,7 +70,7 @@ export function HomePage() {
             id: 'tubishvat',
             name: 'חגיגת ט"ו בשבט',
             description: 'משחק מרתק בנושא ט"ו בשבט ושבעת המינים',
-            thumbnail: '/assets/games/tubishvat/backgrounds/thumbnail.jpg',
+            thumbnail: '/assets/games/tubishvat/backgrounds/thumbnail.svg',
             active: true,
             theme: 'tubishvat'
           },
@@ -60,17 +83,42 @@ export function HomePage() {
             theme: 'default'
           }
         ];
+
+        // עיבוד המשחקים שנטענו - הוספת thumbnail אם לא קיים
+        const processedGames = availableGames.map(game => {
+          // בדיקה אם יש thumbnail, אם לא - הוספה
+          if (!game.thumbnail) {
+            return {
+              ...game,
+              thumbnail: `/assets/games/${game.id}/backgrounds/thumbnail.svg`
+            };
+          }
+          return game;
+        });
         
         // שילוב המשחקים - אם אין מה שנטען, השתמש בברירות מחדל
-        const combinedGames = availableGames.length > 0
-          ? availableGames
+        const combinedGames = processedGames.length > 0
+          ? processedGames
           : defaultGames;
         
+        console.log("Final games to display:", combinedGames);
         setGames(combinedGames);
         setError(null);
       } catch (err) {
+        console.error("Error loading games:", err);
         LoggerService.error('שגיאה בטעינת משחקים:', err);
         setError('לא ניתן לטעון את רשימת המשחקים');
+        // במקרה של שגיאה, השתמש במשחקי ברירת מחדל
+        setGames([
+          {
+            id: 'passover',
+            name: 'המסע לחירות',
+            description: 'משחק אינטראקטיבי בנושא פסח ויציאת מצרים',
+            thumbnail: '/assets/shared/placeholders/background_placeholder.svg',
+            active: true,
+            theme: 'passover'
+          }
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -120,7 +168,7 @@ export function HomePage() {
             {isLoading ? (
               <div className="flex justify-center items-center py-20">
                 <LoadingIndicator 
-                  type="pulse" 
+                  type="spinner" 
                   size="large" 
                   color="primary"
                 />
@@ -157,6 +205,25 @@ export function HomePage() {
               &copy; מערכת מסע הדעת | כל הזכויות שמורות
             </div>
           </footer>
+
+          {/* פאנל דיבוג */}
+          {process.env.NODE_ENV !== "production" && (
+            <div className="fixed bottom-4 left-4 bg-white bg-opacity-90 p-3 rounded shadow-md text-xs z-50 max-w-sm">
+              <details>
+                <summary className="font-bold cursor-pointer mb-1">DEBUG INFO</summary>
+                <div className="space-y-1">
+                  <div>Games loaded: {games.length}</div>
+                  <div>Loading state: {isLoading ? "loading" : "completed"}</div>
+                  <div>Error: {error || "none"}</div>
+                  <div className="overflow-auto max-h-32">
+                    <pre className="text-xs">
+                      {JSON.stringify(debugInfo, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </details>
+            </div>
+          )}
         </div>
       </div>
     </ThemeProvider>
@@ -172,6 +239,7 @@ function GameCard({ game }) {
   
   // טיפול בשגיאות טעינת תמונה
   const handleImageError = (e) => {
+    console.log("Image load error for:", e.target.src);
     e.target.onerror = null;
     e.target.src = '/assets/shared/placeholders/background_placeholder.svg';
   };
@@ -280,20 +348,8 @@ function FutureGameCard() {
     >
       <div className="flex flex-col justify-center items-center h-full p-10 text-center">
         <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center mb-6">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-10 w-10 text-indigo-400" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={1.5} 
-              d="M13 10V3L4 14h7v7l9-11h-7z" 
-            />
-          </svg>
+          {/* החלפת SVG מורכב בסמל פשוט יותר */}
+          <div className="text-4xl text-indigo-400">+</div>
         </div>
         
         <Heading level={2} className="text-2xl font-bold text-indigo-700 mb-3">
