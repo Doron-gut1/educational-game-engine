@@ -1,15 +1,18 @@
 // src/modules/matching/MatchingGame.jsx
 import React, { useState, useEffect } from 'react';
 import { MatchCard } from './MatchCard';
-import { ProgressBar } from '../../components/ui/ProgressBar';
+import { useGameContext } from '../../contexts/GameContext';
 import { useScoring } from '../../hooks/useScoring';
 import { useHints } from '../../hooks/useHints';  // הוק חדש - src/hooks/useHints.js
-import HintsPanel from '../../components/ui/HintsPanel';  // רכיב חדש - תיקון אופן הייבוא
-import SourceReference from '../../components/ui/SourceReference';  // רכיב חדש - תיקון אופן הייבוא
-import LearningPopup from '../../components/ui/LearningPopup';  // רכיב חדש - תיקון אופן הייבוא
 
 // ייבוא מערכת העיצוב החדשה
-import { Button } from '../../design-system/components';
+import { 
+  Button, 
+  ProgressTracker, 
+  HintsPanel, 
+  SourceReference, 
+  LearningPopup 
+} from '../../design-system/components';
 
 /**
  * משחק התאמה בין פריטים
@@ -36,6 +39,7 @@ export function MatchingGame({
   learningPopup = null
 }) {
   const { addScore } = useScoring();
+  const { getAssetPath, handleImageError } = useGameContext();
   
   // שומרים את הפריטים בצורה נפרדת לאחר פיצול הזוגות
   const [items1, setItems1] = useState([]);
@@ -60,15 +64,35 @@ export function MatchingGame({
   
   // פיצול הזוגות לשתי רשימות נפרדות
   useEffect(() => {
+    // עיבוד הפריטים עם הוספת נתיבי תמונות אם צריך
+    const processContent = (content) => {
+      if (typeof content === 'string') {
+        return content;
+      }
+      
+      if (content && typeof content === 'object') {
+        // אם זה אובייקט עם שדה image, מטפלים בנתיב התמונה
+        if (content.image) {
+          return {
+            ...content,
+            image: getAssetPath(content.image, 'images')
+          };
+        }
+        return content;
+      }
+      
+      return content;
+    };
+    
     const left = pairs.map(pair => ({
       id: `left-${pair.id}`,
-      content: pair.item1,
+      content: processContent(pair.item1),
       pairId: pair.id
     }));
     
     const right = pairs.map(pair => ({
       id: `right-${pair.id}`,
-      content: pair.item2,
+      content: processContent(pair.item2),
       pairId: pair.id
     }));
     
@@ -80,7 +104,7 @@ export function MatchingGame({
       setItems1(left);
       setItems2(right);
     }
-  }, [pairs, shuffleItems]);
+  }, [pairs, shuffleItems, getAssetPath]);
   
   // בקשת רמז
   const handleRequestHint = () => {
@@ -195,10 +219,11 @@ export function MatchingGame({
         <p className="text-gray-600">{instructions}</p>
       )}
       
-      <ProgressBar 
-        value={matchedPairs.length} 
-        max={pairs.length} 
-        color="primary" 
+      <ProgressTracker 
+        stages={pairs.map((p, idx) => ({ id: p.id, title: `זוג ${idx+1}` }))}
+        currentStageId={null}
+        completedStages={matchedPairs}
+        compact={true}
       />
       
       {/* מקור ורפרנס */}
@@ -223,6 +248,7 @@ export function MatchingGame({
               isSelected={selectedItem1 === item.id}
               isMatched={isPairMatched(item.pairId)}
               onClick={() => handleSelectItem1(item.id)}
+              onImageError={handleImageError}
             />
           ))}
         </div>
@@ -237,6 +263,7 @@ export function MatchingGame({
               isSelected={selectedItem2 === item.id}
               isMatched={isPairMatched(item.pairId)}
               onClick={() => handleSelectItem2(item.id)}
+              onImageError={handleImageError}
             />
           ))}
         </div>
@@ -244,8 +271,7 @@ export function MatchingGame({
       
       {/* פאנל רמזים */}
       <HintsPanel 
-        hints={hints}
-        revealedHints={getRevealedHints()}
+        hints={getRevealedHints()}
         canRevealMore={canRevealHint()}
         onRequestHint={handleRequestHint}
         hintsUsed={hintsUsed}
