@@ -20,14 +20,34 @@ export const LoadingIndicator = ({
     large: 'w-16 h-16'
   };
   
-  // מיפוי צבעים
-  const colorMap = {
+  // מיפוי צבעים לסגנון border
+  const borderColorMap = {
     primary: 'border-blue-500',
     secondary: 'border-gray-400',
     accent: 'border-amber-500',
     white: 'border-white',
     passover: 'border-indigo-500',
     tubishvat: 'border-emerald-500'
+  };
+  
+  // מיפוי צבעים לסגנון רקע
+  const bgColorMap = {
+    primary: 'bg-blue-500',
+    secondary: 'bg-gray-400',
+    accent: 'bg-amber-500',
+    white: 'bg-white',
+    passover: 'bg-indigo-500',
+    tubishvat: 'bg-emerald-500'
+  };
+  
+  // מיפוי צבעים לטקסט
+  const textColorMap = {
+    primary: 'text-blue-600',
+    secondary: 'text-gray-600',
+    accent: 'text-amber-600',
+    white: 'text-white',
+    passover: 'text-indigo-600',
+    tubishvat: 'text-emerald-600'
   };
   
   // מיפוי גודל טקסט
@@ -43,16 +63,39 @@ export const LoadingIndicator = ({
       case 'spinner':
         return (
           <div 
-            className={`${sizeMap[size]} rounded-full border-t-2 border-b-2 ${colorMap[color]} animate-spin`}
+            className={`${sizeMap[size]} rounded-full border-t-2 border-b-2 ${borderColorMap[color]} animate-spin`}
           ></div>
         );
         
       case 'dots':
+        const dotSize = size === 'small' ? 'w-2 h-2' : size === 'large' ? 'w-4 h-4' : 'w-3 h-3';
+        const dotColor = bgColorMap[color];
+        
         return (
-          <div className="flex space-x-2">
-            <div className={`${size === 'small' ? 'w-2 h-2' : size === 'large' ? 'w-4 h-4' : 'w-3 h-3'} ${color === 'white' ? 'bg-white' : `bg-${color}-500`} rounded-full animate-bounce`} style={{ animationDelay: '0ms' }}></div>
-            <div className={`${size === 'small' ? 'w-2 h-2' : size === 'large' ? 'w-4 h-4' : 'w-3 h-3'} ${color === 'white' ? 'bg-white' : `bg-${color}-500`} rounded-full animate-bounce`} style={{ animationDelay: '150ms' }}></div>
-            <div className={`${size === 'small' ? 'w-2 h-2' : size === 'large' ? 'w-4 h-4' : 'w-3 h-3'} ${color === 'white' ? 'bg-white' : `bg-${color}-500`} rounded-full animate-bounce`} style={{ animationDelay: '300ms' }}></div>
+          <div className="flex space-x-2 rtl:space-x-reverse">
+            <div 
+              className={`${dotSize} ${dotColor} rounded-full animate-bounce`} 
+              style={{ animationDelay: '0ms' }}
+            ></div>
+            <div 
+              className={`${dotSize} ${dotColor} rounded-full animate-bounce`} 
+              style={{ animationDelay: '150ms' }}
+            ></div>
+            <div 
+              className={`${dotSize} ${dotColor} rounded-full animate-bounce`} 
+              style={{ animationDelay: '300ms' }}
+            ></div>
+          </div>
+        );
+        
+      case 'pulse':
+        return (
+          <div className={`${sizeMap[size]} relative`}>
+            <div 
+              className={`absolute inset-0 ${bgColorMap[color]} rounded-full animate-ping opacity-75`}
+              style={{ animationDuration: '1.5s' }}
+            ></div>
+            <div className={`relative rounded-full ${bgColorMap[color]} ${sizeMap[size]}`}></div>
           </div>
         );
         
@@ -70,7 +113,7 @@ export const LoadingIndicator = ({
       default:
         return (
           <div 
-            className={`${sizeMap[size]} rounded-full border-t-2 border-b-2 ${colorMap[color]} animate-spin`}
+            className={`${sizeMap[size]} rounded-full border-t-2 border-b-2 ${borderColorMap[color]} animate-spin`}
           ></div>
         );
     }
@@ -81,7 +124,7 @@ export const LoadingIndicator = ({
       {renderIndicator()}
       
       {showText && (
-        <div className={`mt-4 ${textSizeMap[size]} ${color === 'white' ? 'text-white' : 'text-gray-700'}`}>
+        <div className={`mt-4 ${textSizeMap[size]} ${textColorMap[color]}`}>
           {text}
         </div>
       )}
@@ -93,7 +136,7 @@ LoadingIndicator.propTypes = {
   /**
    * סוג האינדיקטור
    */
-  type: PropTypes.oneOf(['spinner', 'dots', 'scroll']),
+  type: PropTypes.oneOf(['spinner', 'dots', 'pulse', 'scroll']),
   /**
    * גודל האינדיקטור
    */
