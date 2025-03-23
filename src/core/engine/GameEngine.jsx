@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameProvider } from '../../contexts/GameContext';
-import { ThemeProvider } from '../../contexts/ThemeContext';
-import { defaultTheme } from '../../themes/defaultTheme';
+import { ThemeProvider } from '../../design-system/ThemeProvider';
+import { baseTheme } from '../../design-system/themes';
 import { ContentLoader } from '../../services/contentLoader';
 import { AssetManager } from '../../services/assetManager';
 import { LoggerService } from '../../services/loggerService';
@@ -22,7 +22,7 @@ export function GameEngine({
   const [gameConfig, setGameConfig] = useState(null);
   const [gameContent, setGameContent] = useState(null);
   const [characters, setCharacters] = useState({});
-  const [theme, setTheme] = useState(defaultTheme);
+  const [theme, setTheme] = useState(baseTheme);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -57,14 +57,7 @@ export function GameEngine({
 
         // טעינת ערכת נושא אם מוגדרת במשחק
         if (config.theme) {
-          try {
-            const themeModule = await import(`../../themes/${config.theme}Theme.js`);
-            const themeData = themeModule.default || themeModule;
-            setTheme(themeData);
-          } catch (themeError) {
-            LoggerService.warn(`[GameEngine] Could not load theme ${config.theme}:`, themeError);
-            // נשאר עם ערכת ברירת מחדל
-          }
+          setTheme(config.theme);
         }
 
         // קריאה לקולבק עם כל הנתונים
@@ -128,7 +121,7 @@ export function GameEngine({
   };
 
   return (
-    <ThemeProvider initialTheme={theme}>
+    <ThemeProvider theme={theme}>
       <GameProvider gameConfig={gameData}>
         {children}
       </GameProvider>
