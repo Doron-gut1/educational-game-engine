@@ -9,7 +9,7 @@ import React from 'react';
  * @param {Object} props.style - סגנונות נוספים 
  * @param {Function} props.onClick - אירוע לחיצה
  */
-export default function Card({ 
+export function Card({ 
   children, 
   className = '', 
   style = {}, 
