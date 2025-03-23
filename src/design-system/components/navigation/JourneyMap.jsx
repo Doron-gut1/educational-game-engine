@@ -1,184 +1,107 @@
 import React from 'react';
-import PropTypes from 'prop-types';
-import { StageMarker } from './StageMarker';
 
 /**
- * רכיב מפת מסע - מציג את מסלול ההתקדמות במשחק
+ * רכיב מפת מסע - מציג את שלבי המשחק עם חיווי על ההתקדמות
  * 
- * @param {Object} props - Props הרכיב
- * @param {Array} props.stages - רשימת השלבים במשחק
+ * @param {Object} props
+ * @param {Array} props.stages - רשימת השלבים במסע
  * @param {string} props.currentStage - מזהה השלב הנוכחי
- * @param {Array} props.completedStages - רשימת מזהי שלבים שהושלמו
- * @param {Function} props.onStageClick - פונקציה לטיפול בלחיצה על שלב
- * @param {string} props.layout - פריסת המפה (horizontal, vertical)
- * @param {string} props.size - גודל המפה (small, medium, large)
- * @param {string} props.pathStyle - סגנון הנתיב (solid, dashed, dotted)
- * @param {string} props.theme - ערכת הצבעים (default, primary, secondary, accent)
- * @param {boolean} props.animated - האם להוסיף אנימציות
+ * @param {Array} props.completedStages - מזהי השלבים שהושלמו
+ * @param {Function} props.onStageClick - פונקציה שתופעל בלחיצה על שלב
  * @param {string} props.className - מחלקות CSS נוספות
  */
-const JourneyMap = ({ 
-  stages = [],
-  currentStage = '',
+export default function JourneyMap({ 
+  stages = [], 
+  currentStage = null, 
   completedStages = [],
-  onStageClick,
-  layout = 'horizontal',
-  size = 'medium',
-  pathStyle = 'solid',
-  theme = 'primary',
-  animated = true,
-  className = '',
-  ...rest
-}) => {
-  // בדיקה האם שלב נגיש
-  const isStageAccessible = (stageId, index) => {
-    // השלב הנוכחי או שלב שכבר הושלם תמיד נגיש
-    if (stageId === currentStage || completedStages.includes(stageId)) {
-      return true;
-    }
-    
-    // אם זה השלב הראשון, הוא תמיד נגיש
-    if (index === 0) {
-      return true;
-    }
-    
-    // אחרת, השלב נגיש רק אם השלב הקודם לו הושלם
-    const previousStageId = stages[index - 1]?.id;
-    return previousStageId && completedStages.includes(previousStageId);
-  };
-  
-  // בדיקת סטטוס שלב
-  const getStageStatus = (stageId, index) => {
-    if (stageId === currentStage) {
-      return 'current';
-    }
-    if (completedStages.includes(stageId)) {
-      return 'completed';
-    }
-    return isStageAccessible(stageId, index) ? 'accessible' : 'locked';
-  };
-  
-  // מחלקות לכיוון הפריסה
-  const layoutClasses = {
-    horizontal: 'flex flex-row items-center justify-between',
-    vertical: 'flex flex-col items-center space-y-8'
-  };
-  
-  // מחלקות לגודל המפה
-  const sizeClasses = {
-    small: layout === 'horizontal' ? 'h-16' : 'w-16',
-    medium: layout === 'horizontal' ? 'h-20' : 'w-20',
-    large: layout === 'horizontal' ? 'h-24' : 'w-24'
-  };
-  
-  // מחלקות לסגנון הנתיב
-  const pathStyles = {
-    solid: 'border-0',
-    dashed: 'border-dashed',
-    dotted: 'border-dotted'
-  };
-  
-  // צבעים לפי התמה
-  const themeColors = {
-    default: {
-      completed: 'bg-gray-500',
-      current: 'bg-blue-500',
-      accessible: 'bg-gray-300',
-      locked: 'bg-gray-200'
-    },
-    primary: {
-      completed: 'bg-primary',
-      current: 'bg-primary shadow-lg shadow-primary/30',
-      accessible: 'bg-primaryLight',
-      locked: 'bg-gray-200'
-    },
-    secondary: {
-      completed: 'bg-secondary',
-      current: 'bg-secondary shadow-lg shadow-secondary/30',
-      accessible: 'bg-secondaryLight',
-      locked: 'bg-gray-200'
-    },
-    accent: {
-      completed: 'bg-accent',
-      current: 'bg-accent shadow-lg shadow-accent/30',
-      accessible: 'bg-accentLight',
-      locked: 'bg-gray-200'
-    }
-  };
-  
-  // בניית כיתוב CSS למסלול
-  const getPathStyle = (fromStatus, toStatus) => {
-    let baseStyle = `
-      ${layout === 'horizontal' ? 'w-full h-1' : 'w-1 h-full'}
-      transition-all duration-500
-      ${pathStyles[pathStyle]}
-    `;
-    
-    // אם שני השלבים מושלמים או הנוכחי, הנתיב מלא
-    if (fromStatus === 'completed' && ['completed', 'current'].includes(toStatus)) {
-      return `${baseStyle} ${themeColors[theme].completed}`;
-    }
-    
-    // אם השלב הראשון הושלם והשני נגיש, הנתיב בצבע עמום
-    if (fromStatus === 'completed' && toStatus === 'accessible') {
-      return `${baseStyle} ${themeColors[theme].accessible}`;
-    }
-    
-    // בכל מקרה אחר, הנתיב אפור
-    return `${baseStyle} bg-gray-200`;
-  };
+  onStageClick = () => {},
+  className = '', 
+  ...props 
+}) {
+  if (!stages || stages.length === 0) {
+    return null;
+  }
   
   return (
-    <div 
-      className={`${layoutClasses[layout]} ${sizeClasses[size]} ${className}`}
-      {...rest}
-    >
-      {stages.map((stage, index) => (
-        <React.Fragment key={stage.id}>
-          {/* סמן שלב */}
-          <StageMarker
-            stage={stage}
-            status={getStageStatus(stage.id, index)}
-            index={index + 1}
-            size={size}
-            theme={theme}
-            onClick={() => isStageAccessible(stage.id, index) && onStageClick?.(stage.id)}
-            animated={animated && stage.id === currentStage}
-          />
-          
-          {/* נתיב מחבר (חוץ מהאחרון) */}
-          {index < stages.length - 1 && (
-            <div 
-              className={getPathStyle(
-                getStageStatus(stage.id, index),
-                getStageStatus(stages[index + 1].id, index + 1)
-              )}
-            />
-          )}
-        </React.Fragment>
-      ))}
+    <div className={`bg-white bg-opacity-85 border border-amber-200 p-4 rounded-lg shadow-lg ${className}`} {...props}>
+      <h3 className="text-center font-bold text-amber-800 mb-4">מסע הלמידה</h3>
+      
+      <div className="flex overflow-x-auto pb-2">
+        <div className="flex space-x-2 rtl:space-x-reverse min-w-full">
+          {stages.map((stage, index) => {
+            const isActive = stage.id === currentStage;
+            const isCompleted = completedStages.includes(stage.id);
+            const canClick = isCompleted || isActive;
+            
+            let stageClass = "flex flex-col items-center space-y-2 p-2 min-w-[80px] transition-all duration-300 ";
+            
+            if (isActive) {
+              stageClass += "text-blue-700 font-bold scale-110 ";
+            } else if (isCompleted) {
+              stageClass += "text-green-600 ";
+            } else {
+              stageClass += "text-gray-400 ";
+            }
+            
+            if (canClick) {
+              stageClass += "cursor-pointer hover:bg-amber-50 hover:scale-105 rounded-lg ";
+            } else {
+              stageClass += "opacity-50 ";
+            }
+            
+            return (
+              <div 
+                key={stage.id}
+                className={stageClass}
+                onClick={() => canClick && onStageClick(stage.id)}
+              >
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-white 
+                  ${isActive ? 'bg-blue-600 ring-4 ring-blue-200' : 
+                    isCompleted ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  {isCompleted ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  ) : index + 1}
+                </div>
+                <span className="text-xs text-center font-medium">
+                  {stage.shortName || stage.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* קו עם חיצים המחבר בין השלבים */}
+      <div className="relative h-0.5 bg-gray-200 -mt-10 mx-4">
+        <div 
+          className="absolute top-0 h-0.5 bg-gradient-to-r from-green-500 to-blue-500" 
+          style={{
+            width: `${calculateCompletionWidth(stages, completedStages, currentStage)}%`,
+            transition: 'width 0.5s ease-in-out'
+          }}
+        />
+      </div>
     </div>
   );
-};
+}
 
-JourneyMap.propTypes = {
-  stages: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      name: PropTypes.string,
-      icon: PropTypes.node,
-      shortName: PropTypes.string
-    })
-  ).isRequired,
-  currentStage: PropTypes.string,
-  completedStages: PropTypes.arrayOf(PropTypes.string),
-  onStageClick: PropTypes.func,
-  layout: PropTypes.oneOf(['horizontal', 'vertical']),
-  size: PropTypes.oneOf(['small', 'medium', 'large']),
-  pathStyle: PropTypes.oneOf(['solid', 'dashed', 'dotted']),
-  theme: PropTypes.oneOf(['default', 'primary', 'secondary', 'accent']),
-  animated: PropTypes.bool,
-  className: PropTypes.string,
-};
-
-export default JourneyMap;
+// פונקציית עזר לחישוב אחוז ההתקדמות
+function calculateCompletionWidth(stages, completedStages, currentStage) {
+  if (!stages || stages.length === 0) return 0;
+  
+  const totalStages = stages.length;
+  let completedWidth = (completedStages.length / totalStages) * 100;
+  
+  // אם יש שלב פעיל שאינו מושלם, נוסיף חצי ממשקל השלב
+  if (currentStage && !completedStages.includes(currentStage)) {
+    const stageIndex = stages.findIndex(s => s.id === currentStage);
+    if (stageIndex !== -1) {
+      const stageWeight = 100 / totalStages;
+      completedWidth += stageWeight * 0.5;
+    }
+  }
+  
+  return Math.min(completedWidth, 100); // מקסימום 100%
+}
