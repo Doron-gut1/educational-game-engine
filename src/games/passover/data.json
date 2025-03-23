@@ -1,7 +1,7 @@
 {
   "intro": {
     "title": "המסע לחירות",
-    "background": "scroll_background.jpg",
+    "background": "/assets/games/passover/backgrounds/scroll_background.jpg",
     "dialogue": [
       {
         "character": "rabbi_elazar",
