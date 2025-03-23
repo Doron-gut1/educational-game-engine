@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LoggerService, AssetManager } from '../services';
-import { ThemeProvider } from '../contexts/ThemeContext';
-import { defaultTheme } from '../themes/defaultTheme';
+
+// ייבוא ThemeProvider החדש מתוך מערכת העיצוב
+import { ThemeProvider } from '../design-system/ThemeProvider';
+import { baseTheme } from '../design-system/themes';
 
 // ייבוא רכיבי מערכת העיצוב
 import { Button, Card, Heading, PageContainer } from '../design-system/components';
@@ -41,7 +43,7 @@ export function HomePage() {
   }, []);
   
   return (
-    <ThemeProvider initialTheme={defaultTheme}>
+    <ThemeProvider theme={baseTheme}>
       <PageContainer className="min-h-screen py-10 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700">
         {/* צורות דקורטיביות ברקע */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
@@ -49,10 +51,10 @@ export function HomePage() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-blue-400/10 rounded-full blur-2xl"></div>
         
         <header className="text-center relative z-10 mb-12">
-          <Heading level={1} className="text-5xl font-bold text-amber-300 mb-3 tracking-wider animate-pulse-soft">
+          <Heading level={1} className="text-4xl md:text-5xl font-bold text-amber-300 mb-3 tracking-wider animate-pulse-soft">
             מסע הדעת
           </Heading>
-          <p className="text-xl text-blue-100">
+          <p className="text-lg md:text-xl text-blue-100">
             פעילויות לימודיות אינטראקטיביות בנושאי יהדות
           </p>
           
@@ -89,7 +91,7 @@ export function HomePage() {
             <GameCard 
               game={{
                 id: 'tubishvat',
-                name: 'חגיגת ט\\\\\\\"ו בשבט',
+                name: 'חגיגת ט\"ו בשבט',
                 description: 'משחק בנושא ט\"ו בשבט ושבעת המינים',
                 thumbnail: AssetManager.getAssetPath('tubishvat', 'thumbnail.jpg', 'backgrounds')
               }}
@@ -136,12 +138,15 @@ function GameCard({ game, active = true }) {
         className="h-full flex flex-col overflow-hidden border hover:shadow-xl transition-all duration-300 filter grayscale opacity-60" 
         style={cardStyle}
       >
-        <div className="h-48 overflow-hidden">
+        <div className="h-48 overflow-hidden relative">
           <img 
             src={game.thumbnail} 
             alt={game.name} 
             className="w-full h-full object-cover"
-            onError={(e) => AssetManager.handleImageError(e, 'backgrounds')}
+            onError={(e) => {
+              e.target.onerror = null; 
+              e.target.src = '/assets/shared/placeholders/background_placeholder.svg';
+            }}
           />
         </div>
         
@@ -173,12 +178,15 @@ function GameCard({ game, active = true }) {
       className="h-full flex flex-col overflow-hidden border hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:rotate-1" 
       style={cardStyle}
     >
-      <div className="h-48 overflow-hidden">
+      <div className="h-48 overflow-hidden relative">
         <img 
           src={game.thumbnail} 
           alt={game.name} 
           className="w-full h-full object-cover"
-          onError={(e) => AssetManager.handleImageError(e, 'backgrounds')}
+          onError={(e) => {
+            e.target.onerror = null; 
+            e.target.src = '/assets/shared/placeholders/background_placeholder.svg';
+          }}
         />
       </div>
       
@@ -192,16 +200,16 @@ function GameCard({ game, active = true }) {
       </div>
       
       <div className="p-6 pt-0 mt-auto">
-        <Link to={`/game/${game.id}`}>
+        <Link to={`/game/${game.id}`} className="w-full block">
           <Button variant={buttonVariant} className="w-full transform transition-all hover:shadow-lg">
             התחל מסע
           </Button>
         </Link>
       </div>
       
-      {/* איקון חץ */}
-      <div className="absolute bottom-3 left-3 text-amber-300/70 group-hover:text-amber-300 transition-all opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {/* איקון חץ - קטן יותר והותאם פרופורציונית */}
+      <div className="absolute bottom-3 left-3 text-amber-300/70 transition-all opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
       </div>
