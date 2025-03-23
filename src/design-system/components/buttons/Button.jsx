@@ -14,7 +14,7 @@ import PropTypes from 'prop-types';
  * @param {Function} props.onClick - פונקציית לחיצה
  * @param {string} props.className - מחלקות CSS נוספות
  */
-const Button = ({ 
+export function Button({ 
   children, 
   variant = 'primary', 
   size = 'medium', 
@@ -24,17 +24,17 @@ const Button = ({
   onClick,
   className = '',
   ...rest 
-}) => {
+}) {
   // בסיס מחלקות הכפתור
   const baseClasses = "font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2";
   
   // מחלקות לפי וריאנט
   const variantClasses = {
-    primary: "bg-primary text-white hover:bg-primaryDark active:bg-primaryDark/90 shadow-md hover:shadow-lg focus:ring-primary/50",
-    secondary: "bg-secondary text-white hover:bg-secondaryDark active:bg-secondaryDark/90 shadow-md hover:shadow-lg focus:ring-secondary/50",
-    accent: "bg-accent text-white hover:bg-accentDark active:bg-accentDark/90 shadow-md hover:shadow-lg focus:ring-accent/50",
-    outline: "border-2 border-primary text-primary hover:bg-primaryLight hover:bg-opacity-20 active:bg-primaryLight/30 focus:ring-primary/40",
-    text: "text-primary hover:bg-primaryLight hover:bg-opacity-10 active:bg-primaryLight/20 focus:ring-primary/30",
+    primary: "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg focus:ring-blue-500/50",
+    secondary: "bg-purple-600 text-white hover:bg-purple-700 active:bg-purple-800 shadow-md hover:shadow-lg focus:ring-purple-500/50",
+    accent: "bg-amber-500 text-white hover:bg-amber-600 active:bg-amber-700 shadow-md hover:shadow-lg focus:ring-amber-400/50",
+    outline: "border-2 border-blue-600 text-blue-600 hover:bg-blue-50 active:bg-blue-100 focus:ring-blue-500/40",
+    text: "text-blue-600 hover:bg-blue-50 hover:bg-opacity-50 active:bg-blue-100 focus:ring-blue-500/30",
     disabled: "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none",
     
     // וריאנטים לפי נושאי חגים
@@ -91,11 +91,11 @@ const Button = ({
       {children}
     </button>
   );
-};
+}
 
 Button.propTypes = {
   children: PropTypes.node.isRequired,
-  variant: PropTypes.string,
+  variant: PropTypes.oneOf(['primary', 'secondary', 'accent', 'outline', 'text', 'disabled', 'passover', 'tubishvat']),
   size: PropTypes.oneOf(['small', 'medium', 'large']),
   disabled: PropTypes.bool,
   fullWidth: PropTypes.bool,
@@ -103,5 +103,3 @@ Button.propTypes = {
   onClick: PropTypes.func,
   className: PropTypes.string,
 };
-
-export default Button;
