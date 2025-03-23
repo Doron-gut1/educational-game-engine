@@ -2,19 +2,28 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 /**
- * רכיב מיכל (container) לדף שלם
+ * רכיב מיכל לכל דף במערכת
  */
 export const PageContainer = ({
   children,
   className = '',
+  style = {},
+  fluid = false,
+  maxWidth = 'max-w-7xl',
   ...props
 }) => {
+  // בדיקה האם להשתמש ברוחב מקסימלי או במסך מלא
+  const containerClass = fluid ? 'w-full' : `mx-auto ${maxWidth}`;
+  
   return (
     <div
-      className={`min-h-screen w-full ${className}`}
+      className={`min-h-screen ${className}`}
+      style={style}
       {...props}
     >
-      {children}
+      <div className={`px-4 ${containerClass}`}>
+        {children}
+      </div>
     </div>
   );
 };
@@ -27,7 +36,19 @@ PageContainer.propTypes = {
   /**
    * className נוסף
    */
-  className: PropTypes.string
+  className: PropTypes.string,
+  /**
+   * סגנון מותאם אישית
+   */
+  style: PropTypes.object,
+  /**
+   * האם להשתמש ברוחב מלא ללא הגבלה
+   */
+  fluid: PropTypes.bool,
+  /**
+   * הגבלת רוחב מקסימלי (כשfluid = false)
+   */
+  maxWidth: PropTypes.string
 };
 
 export default PageContainer;
