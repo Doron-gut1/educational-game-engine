@@ -26,7 +26,7 @@ export function HomePage() {
       
       try {
         // טעינת רשימת המשחקים הזמינים
-        const gamesModule = await import('../games/index.js');
+        const gamesModule = await import('../games/index.js').catch(() => ({ availableGames: [] }));
         const games = gamesModule.availableGames || [];
         
         // משחקים קבועים לדוגמה (במידה ואין מספיק משחקים)
@@ -35,7 +35,7 @@ export function HomePage() {
             id: 'passover',
             name: 'המסע לחירות',
             description: 'משחק פסח אינטראקטיבי על מסע יציאת מצרים',
-            thumbnail: '/assets/games/passover/backgrounds/thumbnail.svg',
+            thumbnail: '/assets/games/passover/backgrounds/thumbnail.jpg',
             active: true,
             theme: 'passover'
           },
@@ -43,7 +43,7 @@ export function HomePage() {
             id: 'tubishvat',
             name: 'חגיגת ט\\\"ו בשבט',
             description: 'משחק בנושא ט\\\"ו בשבט ושבעת המינים',
-            thumbnail: '/assets/games/tubishvat/backgrounds/thumbnail.svg',
+            thumbnail: '/assets/games/tubishvat/backgrounds/thumbnail.jpg',
             active: false,
             theme: 'tubishvat'
           }
@@ -53,10 +53,17 @@ export function HomePage() {
         const allGames = games.length > 0 ? games : defaultGames;
         
         // הוספת נתיבים מלאים לתמונות ממוזערות
-        const gamesWithThumbnails = allGames.map(game => ({
-          ...game,
-          thumbnail: game.thumbnail || `/assets/games/${game.id}/backgrounds/thumbnail.svg`
-        }));
+        const gamesWithThumbnails = allGames.map(game => {
+          // נתיב ברירת מחדל לתמונה ממוזערת
+          let thumbnailPath = game.thumbnail || `/assets/games/${game.id}/backgrounds/thumbnail.jpg`;
+          
+          LoggerService.debug(`Setting thumbnail path for ${game.id}: ${thumbnailPath}`);
+          
+          return {
+            ...game,
+            thumbnail: thumbnailPath
+          };
+        });
         
         setAvailableGames(gamesWithThumbnails);
       } catch (err) {
@@ -203,6 +210,7 @@ function GameCard({ game, active = true }) {
           alt={game.name} 
           className="w-full h-full object-cover"
           onError={(e) => {
+            console.log(`Error loading image: ${e.target.src}`);
             e.target.onerror = null; 
             e.target.src = '/assets/shared/placeholders/background_placeholder.svg';
           }}
