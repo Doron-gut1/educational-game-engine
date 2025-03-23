@@ -4,8 +4,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { LoggerService } from './services';
 import './App.css';
 
-// ייבוא מערכת העיצוב החדשה
-import { ThemeProvider } from './design-system';
+// ייבוא מערכת העיצוב החדשה 
+import { ThemeProvider } from './design-system/ThemeProvider';
+import { baseTheme } from './design-system/themes';
 
 // ייבוא הדפים החדשים
 import HomePage from './pages/HomePage';
@@ -15,7 +16,7 @@ function App() {
   LoggerService.debug("App component initialized");
   
   return (
-    <ThemeProvider theme="base">
+    <ThemeProvider theme={baseTheme}>
       <Router>
         <Routes>
           <Route path="/" element={<HomePage />} />
