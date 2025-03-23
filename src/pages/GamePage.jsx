@@ -15,7 +15,9 @@ import {
   ScrollCard,
   GlassCard,
   JourneyMap,
-  PageContainer
+  ProgressTracker,
+  PageContainer,
+  GameContainer
 } from '../design-system/components';
 
 export function GamePage() {
@@ -54,24 +56,27 @@ export function GamePage() {
         
         // עדכון רקע אם קיים
         if (initialStage.background) {
-          const bgPath = initialStage.background.startsWith('/') 
-            ? initialStage.background 
-            : `/assets/games/${gameId}/backgrounds/${initialStage.background}`;
-            
-          setBackgroundPath(bgPath);
+          setBackgroundPath(AssetManager.getAssetPath(gameId, initialStage.background, 'backgrounds'));
+        } else {
+          // אם אין רקע ספציפי לשלב, לקחת את רקע ברירת המחדל של המשחק
+          setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
         }
       }
+    }
+    
+    // טעינה מקדימה של נכסים
+    if (gameId) {
+      AssetManager.preloadEssentialAssets(gameId).catch(err => {
+        LoggerService.warn("טעינה מוקדמת של נכסים נכשלה:", err);
+        // ממשיכים למרות השגיאה כדי לאפשר למשחק לפעול
+      });
     }
   };
   
   // טיפול בשינוי שלב נוכחי
   useEffect(() => {
     if (currentStage?.background && gameId) {
-      const bgPath = currentStage.background.startsWith('/') 
-        ? currentStage.background 
-        : `/assets/games/${gameId}/backgrounds/${currentStage.background}`;
-        
-      setBackgroundPath(bgPath);
+      setBackgroundPath(AssetManager.getAssetPath(gameId, currentStage.background, 'backgrounds'));
     }
   }, [currentStage, gameId]);
   
@@ -167,21 +172,26 @@ export function GamePage() {
     }
     
     // שלב פתיחה
-    const stages = [
-      { id: 'intro', name: 'פתיחה', shortName: 'פתיחה' }
-    ];
+    const stages = [];
+    
+    // אם יש שלב פתיחה, נוסיף אותו
+    if (gameData.content.intro) {
+      stages.push({ id: 'intro', name: 'פתיחה', shortName: 'פתיחה' });
+    }
     
     // הוספת השלבים
-    gameData.content.stages.forEach(stage => {
+    gameData.content.stages.forEach((stage, index) => {
       stages.push({
         id: stage.id,
-        name: stage.title || `שלב ${stages.length}`,
-        shortName: stage.shortTitle || stage.title || `שלב ${stages.length}`
+        name: stage.title || `שלב ${index + 1}`,
+        shortName: stage.shortTitle || stage.title || `שלב ${index + 1}`
       });
     });
     
-    // שלב סיום
-    stages.push({ id: 'outro', name: 'סיום', shortName: 'סיום' });
+    // אם יש שלב סיום, נוסיף אותו
+    if (gameData.content.outro) {
+      stages.push({ id: 'outro', name: 'סיום', shortName: 'סיום' });
+    }
     
     return stages;
   };
@@ -197,19 +207,29 @@ export function GamePage() {
         style={getBackgroundStyle()}
       >
         {error ? (
-          <div className="bg-white bg-opacity-90 p-8 rounded-lg shadow-lg text-center">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">שגיאה</h2>
-            <p>{error}</p>
+          <GlassCard className="mx-auto mt-16 p-8 max-w-lg text-center">
+            <h2 className="text-2xl font-bold text-red-500 mb-4">שגיאה</h2>
+            <p className="mb-6">{error}</p>
             <Button
               onClick={() => navigate('/')}
-              className="mt-6"
+              variant="secondary"
             >
               חזרה לדף הבית
             </Button>
-          </div>
+          </GlassCard>
         ) : !gameData ? (
-          <div className="flex justify-center items-center min-h-screen">
-            <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+          <div className="flex h-screen items-center justify-center">
+            <div className="text-center">
+              <div className="loading-scroll animate-pulse-soft">
+                <img 
+                  src="/assets/shared/ui/loading-scroll.svg" 
+                  alt="טוען..." 
+                  className="w-20 h-20 mx-auto"
+                  onError={(e) => AssetManager.handleImageError(e, 'images')}
+                />
+              </div>
+              <p className="mt-4 text-white">טוען משחק...</p>
+            </div>
           </div>
         ) : (
           <>
@@ -219,7 +239,6 @@ export function GamePage() {
                 <Button 
                   onClick={() => navigate('/')}
                   variant="outline"
-                  size="small"
                   className="border-white text-white hover:bg-white/20"
                 >
                   חזרה לדף הבית
