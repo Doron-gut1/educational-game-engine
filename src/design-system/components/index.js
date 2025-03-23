@@ -1,27 +1,46 @@
 // ייצוא מרוכז של כל רכיבי מערכת העיצוב
 
 // רכיבי תוכן בסיסיים
-export { Button } from './Button';
-export { Card } from './Card';
-export { ScrollCard } from './ScrollCard';
-export { GlassCard } from './GlassCard';
-export { Heading } from './Heading';
-export { StageHeading } from './StageHeading';
+import { Button } from './Button';
+import { Card } from './Card';
+import { ScrollCard } from './ScrollCard';
+import { GlassCard } from './GlassCard';
+import { Heading } from './Heading';
+import { StageHeading } from './StageHeading';
 
 // רכיבי פריסה
-export { PageContainer } from './PageContainer';
-export { GameContainer } from './GameContainer';
-export { JourneyMap } from './JourneyMap';
-export { ProgressTracker } from './ProgressTracker';
-export { SourceReference } from './SourceReference';
+import { PageContainer } from './PageContainer';
+import { GameContainer } from './GameContainer';
+import { JourneyMap } from './JourneyMap';
+import { ProgressTracker } from './ProgressTracker';
+import { SourceReference } from './SourceReference';
 
 // רכיבי משוב ולמידה
-export { HintsPanel } from './HintsPanel';
-export { LearningPopup } from './LearningPopup';
+import { HintsPanel } from './HintsPanel';
+import { LearningPopup } from './LearningPopup';
 
 // רכיבים נוספים שיידרשו בהמשך
-export { CharacterDialog } from './CharacterDialog';
-export { LoadingIndicator } from './LoadingIndicator';
+import { CharacterDialog } from './CharacterDialog';
+import { LoadingIndicator } from './LoadingIndicator';
+
+// ייצוא כל הרכיבים בנפרד
+export { 
+  Button,
+  Card,
+  ScrollCard,
+  GlassCard,
+  Heading,
+  StageHeading,
+  PageContainer,
+  GameContainer,
+  JourneyMap,
+  ProgressTracker,
+  SourceReference,
+  HintsPanel,
+  LearningPopup,
+  CharacterDialog,
+  LoadingIndicator
+};
 
 // מייצא את כל הרכיבים כברירת מחדל
 export default {
