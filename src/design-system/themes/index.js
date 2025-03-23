@@ -39,6 +39,7 @@ export const mergeTheme = (baseTheme, overrides) => {
 // אובייקט התמות הזמינות - מאפשר בחירה דינמית לפי מזהה
 export const themes = {
   base: baseTheme,
+  default: baseTheme, // הוספת default כמפתח נוסף שמצביע על baseTheme
   passover: passoverTheme,
   tuBishvat: tuBishvatTheme
 };
