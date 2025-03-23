@@ -1,6 +1,9 @@
 /**
  * ייצוא מרוכז של כל רכיבי הכרטיסים במערכת
  */
-export { default as Card } from './Card';
-export { default as ScrollCard } from './ScrollCard';
-export { default as GlassCard } from './GlassCard';
+import Card from './Card';
+import ScrollCard from './ScrollCard';
+import GlassCard from './GlassCard';
+
+// ייצוא ישיר של הרכיבים
+export { Card, ScrollCard, GlassCard };
