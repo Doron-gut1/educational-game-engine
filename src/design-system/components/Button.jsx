@@ -14,17 +14,18 @@ export const Button = React.forwardRef(({
   className = '',
   ...props
 }, ref) => {
-  const theme = useTheme() || {};
+  const theme = useTheme();
   
   // מיפוי וריאנטים
   const variantStyles = {
-    primary: `bg-blue-600 hover:bg-blue-700 text-white shadow-md`,
-    secondary: `bg-gray-200 hover:bg-gray-300 text-gray-800 shadow-sm`,
-    outline: `bg-transparent border border-current hover:bg-gray-100 text-blue-600`,
-    ghost: `bg-transparent hover:bg-gray-100 text-blue-600`,
-    // וריאנטים ספציפיים לנושאים
-    passover: `bg-indigo-600 hover:bg-indigo-700 text-white shadow-md`,
-    tubishvat: `bg-emerald-600 hover:bg-emerald-700 text-white shadow-md`,
+    primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+    secondary: 'bg-gray-500 hover:bg-gray-600 text-white',
+    accent: 'bg-amber-500 hover:bg-amber-600 text-white',
+    outline: 'border border-current bg-transparent hover:bg-gray-100',
+    outlineWhite: 'border border-white text-white hover:bg-white/10',
+    text: 'bg-transparent hover:bg-gray-100',
+    passover: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+    tubishvat: 'bg-emerald-600 hover:bg-emerald-700 text-white'
   };
   
   // מיפוי גדלים
@@ -34,24 +35,30 @@ export const Button = React.forwardRef(({
     large: 'px-5 py-3 text-lg'
   };
   
-  // סגנון השבתה
-  const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed' : '';
+  // סגנון נכות
+  const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
   
-  // בנייה של class שלם
+  // החלת הסגנון המתאים לפי הווריאנט
+  const appliedVariantStyle = variantStyles[variant] || variantStyles.primary;
+  
+  // החלת הסגנון המתאים לפי הגודל
+  const appliedSizeStyle = sizeStyles[size] || sizeStyles.medium;
+  
+  // החלת קלאסים
   const combinedClasses = `
     rounded-md font-medium transition-all duration-200
-    ${variantStyles[variant] || variantStyles.primary}
-    ${sizeStyles[size] || sizeStyles.medium}
+    ${appliedVariantStyle}
+    ${appliedSizeStyle}
     ${disabledStyle}
     ${className}
-  `.trim().replace(/\s+/g, ' '); // ניקוי רווחים מיותרים
+  `.trim();
   
   return (
-    <button 
+    <button
       ref={ref}
       className={combinedClasses}
       disabled={disabled}
-      onClick={disabled ? undefined : onClick}
+      onClick={onClick}
       {...props}
     >
       {children}
@@ -65,11 +72,11 @@ Button.propTypes = {
   /**
    * תוכן הכפתור
    */
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   /**
    * סגנון הכפתור
    */
-  variant: PropTypes.oneOf(['primary', 'secondary', 'outline', 'ghost', 'passover', 'tubishvat']),
+  variant: PropTypes.oneOf(['primary', 'secondary', 'accent', 'outline', 'outlineWhite', 'text', 'passover', 'tubishvat']),
   /**
    * גודל הכפתור
    */
@@ -79,11 +86,11 @@ Button.propTypes = {
    */
   disabled: PropTypes.bool,
   /**
-   * פונקציה המופעלת בלחיצה
+   * פונקציה שתופעל בלחיצה
    */
   onClick: PropTypes.func,
   /**
-   * className נוסף
+   * מחלקת CSS נוספת
    */
   className: PropTypes.string
 };
