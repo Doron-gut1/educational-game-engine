@@ -21,6 +21,15 @@ export class AssetManager {
     icons: 'icons'
   };
   
+  // נתיבים לנכסי ברירת מחדל
+  static defaultAssets = {
+    backgrounds: '/assets/shared/placeholders/backgrounds_placeholder.svg',
+    characters: '/assets/shared/placeholders/characters_placeholder.svg',
+    items: '/assets/shared/placeholders/items_placeholder.svg',
+    images: '/assets/shared/ui/placeholder.svg',
+    audio: null // אין ברירת מחדל לאודיו
+  };
+  
   /**
    * טעינה מוקדמת של נכסים הכרחיים
    * @param {string} gameId - מזהה המשחק
@@ -32,8 +41,10 @@ export class AssetManager {
     try {
       // אם לא הועברה רשימה ספציפית, ניתן לקבוע קבוצות ברירת מחדל
       const defaultAssets = [
+        // רקעים חיוניים
         { type: 'backgrounds', path: 'scroll_background.jpg' },
-        { type: 'backgrounds', path: 'intro_background.jpg' }
+        { type: 'backgrounds', path: 'intro_background.jpg' },
+        { type: 'backgrounds', path: 'thumbnail.svg' },
       ];
       
       const assetsToLoad = essentialAssets.length ? essentialAssets : defaultAssets;
@@ -41,7 +52,7 @@ export class AssetManager {
       // הכנת מערך הבטחות לטעינה מקבילה
       const loadPromises = assetsToLoad.map(asset => {
         const fullPath = this.getAssetPath(gameId, asset.path, asset.type);
-        return this.preloadAsset(fullPath, asset.type);
+        return this.preloadAssetWithRetry(fullPath, asset.type, 2);
       });
       
       // המתנה לסיום כל הטעינות
@@ -51,6 +62,40 @@ export class AssetManager {
       LoggerService.error(`[AssetManager] שגיאה בטעינה מוקדמת:`, error);
       // לא לזרוק חריגה כדי לאפשר למשחק להמשיך גם ללא כל הנכסים
     }
+  }
+  
+  /**
+   * טעינת נכס עם מנגנון ניסיונות חוזרים
+   * @param {string} assetPath - נתיב הנכס
+   * @param {string} assetType - סוג הנכס (images, audio)
+   * @param {number} maxRetries - מספר ניסיונות מקסימלי
+   */
+  static async preloadAssetWithRetry(assetPath, assetType = 'images', maxRetries = 2) {
+    let attempts = 0;
+    let lastError;
+    
+    while (attempts < maxRetries) {
+      try {
+        const asset = await this.preloadAsset(assetPath, assetType);
+        return asset;
+      } catch (error) {
+        lastError = error;
+        LoggerService.warn(`[AssetManager] ניסיון ${attempts + 1}/${maxRetries} נכשל עבור ${assetPath}: ${error.message}`);
+        attempts++;
+        
+        // אם זה הניסיון האחרון ויש נכס ברירת מחדל, ננסה לטעון אותו
+        if (attempts === maxRetries && this.defaultAssets[assetType]) {
+          try {
+            LoggerService.info(`[AssetManager] טוען נכס ברירת מחדל ${this.defaultAssets[assetType]}`);
+            return await this.preloadAsset(this.defaultAssets[assetType], assetType);
+          } catch (fallbackError) {
+            LoggerService.error(`[AssetManager] גם נכס ברירת המחדל נכשל:`, fallbackError);
+          }
+        }
+      }
+    }
+    
+    throw lastError || new Error(`[AssetManager] כל הניסיונות לטעינת ${assetPath} נכשלו`);
   }
   
   /**
@@ -150,7 +195,28 @@ export class AssetManager {
     }
     
     // טעינת הנכס אם אינו במטמון
-    return await this.preloadAsset(fullPath, assetType);
+    return await this.preloadAssetWithRetry(fullPath, assetType);
+  }
+  
+  /**
+   * פונקציית עזר לטיפול בשגיאות טעינת תמונה
+   * @param {Event} errorEvent - אירוע השגיאה
+   * @param {string} assetType - סוג הנכס
+   */
+  static handleImageError(errorEvent, assetType = 'images') {
+    errorEvent.target.onerror = null;  // למניעת לולאות אינסופיות
+    
+    // נתיב הנכס המקורי לדיווח
+    const originalSrc = errorEvent.target.src;
+    LoggerService.warn(`[AssetManager] שגיאת טעינת תמונה: ${originalSrc}`);
+    
+    // בדיקה אם יש נכס ברירת מחדל
+    const fallbackSrc = this.defaultAssets[assetType];
+    
+    if (fallbackSrc) {
+      LoggerService.info(`[AssetManager] משתמש בנכס ברירת מחדל: ${fallbackSrc}`);
+      errorEvent.target.src = fallbackSrc;
+    }
   }
   
   /**
