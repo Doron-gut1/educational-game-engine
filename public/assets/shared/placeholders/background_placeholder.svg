@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="400" height="250" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">
+  <!-- רקע כללי -->
+  <rect width="400" height="250" fill="#667991" />
+  
+  <!-- הרים ברקע -->
+  <polygon points="0,250 100,150 200,200 300,120 400,180 400,250" fill="#4a5568" />
+  <polygon points="0,250 150,180 250,220 400,150 400,250" fill="#2d3748" />
+  
+  <!-- שמש -->
+  <circle cx="350" cy="50" r="25" fill="#ffd700" />
+  
+  <!-- טקסט -->
+  <text x="200" y="125" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#ffffff">Background Placeholder</text>
+</svg>
