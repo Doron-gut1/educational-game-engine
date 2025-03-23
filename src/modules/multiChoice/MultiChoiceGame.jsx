@@ -31,7 +31,7 @@ export function MultiChoiceGame({
   sourceReference = null,
   learningPopup = null
 }) {
-  const { state } = useGameContext();
+  const { state, getAssetPath } = useGameContext();
   const { addScore } = useScoring();
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -62,6 +62,34 @@ export function MultiChoiceGame({
     setIsCorrect(false);
     resetHints();
   }, [currentQuestionIndex, resetHints]);
+  
+  // עיבוד תמונות שאלה (אם יש)
+  const processQuestionWithAssets = (question) => {
+    if (!question) return null;
+    
+    // יצירת עותק של השאלה
+    const processedQuestion = { ...question };
+    
+    // עיבוד תמונה אם קיימת
+    if (processedQuestion.image) {
+      processedQuestion.image = getAssetPath(processedQuestion.image, 'images');
+    }
+    
+    // עיבוד תמונות באופציות אם קיימות
+    if (processedQuestion.options && Array.isArray(processedQuestion.options)) {
+      processedQuestion.options = processedQuestion.options.map(option => {
+        if (option.image) {
+          return {
+            ...option,
+            image: getAssetPath(option.image, 'images')
+          };
+        }
+        return option;
+      });
+    }
+    
+    return processedQuestion;
+  };
   
   // פילטור אופציות לפי רמת קושי
   const getFilteredOptions = () => {
@@ -157,6 +185,9 @@ export function MultiChoiceGame({
     );
   }
   
+  // עיבוד השאלה הנוכחית עם תמונות מעובדות
+  const processedQuestion = processQuestionWithAssets(currentQuestion);
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
@@ -182,7 +213,7 @@ export function MultiChoiceGame({
       )}
       
       <QuestionCard
-        question={currentQuestion}
+        question={processedQuestion}
         options={getFilteredOptions()}
         selectedOption={selectedOption}
         isAnswered={isAnswered}
