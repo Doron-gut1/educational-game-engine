@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LoggerService, AssetManager } from '../services';
 import { GameEngine } from '../core/engine/GameEngine';
+import { useGameContext } from '../contexts/GameContext';
 
 // רכיבי משחק מודולריים
 import { MultiChoiceGame } from '../modules/multiChoice/MultiChoiceGame';
@@ -18,7 +19,10 @@ import {
   GlassCard,
   ScrollCard,
   JourneyMap,
-  LoadingIndicator
+  LoadingIndicator,
+  PageContainer,
+  GameContainer,
+  StageHeading
 } from '../design-system/components';
 
 export function GamePage() {
@@ -101,7 +105,24 @@ export function GamePage() {
   // טיפול בשינוי שלב נוכחי
   useEffect(() => {
     if (currentStage?.background && gameId) {
-      setBackgroundPath(AssetManager.getAssetPath(gameId, currentStage.background, 'backgrounds'));
+      const bgPath = AssetManager.getAssetPath(gameId, currentStage.background, 'backgrounds');
+      
+      // בדיקה אם הרקע קיים
+      fetch(bgPath, { method: 'HEAD' })
+        .then(response => {
+          if (response.ok) {
+            setBackgroundPath(bgPath);
+          } else {
+            // אם הרקע לא נמצא, שימוש ברקע ברירת מחדל
+            LoggerService.warn(`Background not found: ${bgPath}, using default`);
+            setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
+          }
+        })
+        .catch(() => {
+          // במקרה של שגיאת רשת, שימוש ברקע ברירת מחדל
+          LoggerService.warn(`Failed to check background: ${bgPath}, using default`);
+          setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
+        });
     }
   }, [currentStage, gameId]);
   
@@ -283,29 +304,32 @@ export function GamePage() {
     setLoadingTimeout(false);
     setError(null);
     
-    // טעינה מחדש של המשחק
-    setTimeout(() => {
-      // כאן אנחנו מסתמכים על כך שGameEngine יבצע טעינה חדשה
-      // בגלל שהקומפוננטה תרונדר מחדש
-      setLoading(false);
-    }, 100);
+    // ניסיון לטעון את המשחק מחדש
+    window.location.reload();
   };
   
   // טיפול בשגיאות תמונה
-  const handleImageError = (e) => {
+  const handleImageError = useCallback((e) => {
+    if (!e || !e.target) return;
+    
+    // מניעת לולאות אינסופיות
     e.target.onerror = null;
-    e.target.src = '/assets/shared/placeholders/background_placeholder.svg';
-  };
+    
+    // שימוש בתמונת ברירת מחדל
+    e.target.src = '/assets/shared/placeholders/image_placeholder.svg';
+    
+    LoggerService.warn(`Failed to load image: ${e.target.src}, using default placeholder`);
+  }, []);
   
   // בחירת נושא לפי משחק
-  const getTheme = () => {
+  const getTheme = useCallback(() => {
     if (gameData?.theme) {
       return gameData.theme;
     }
     
     // ברירת מחדל לפי מזהה המשחק
     return gameId || 'base';
-  };
+  }, [gameData, gameId]);
   
   return (
     <ThemeProvider theme={getTheme()}>
@@ -362,84 +386,84 @@ export function GamePage() {
             onGameLoad={handleGameLoad}
             onError={handleLoadError}
           >
-            <header className="bg-black bg-opacity-50 p-4 border-b border-white/10 sticky top-0 z-10">
-              <div className="container mx-auto flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-white">{gameData.name}</h1>
-                <Button 
-                  onClick={() => navigate('/')}
-                  variant="outline"
-                  className="border-white text-white hover:bg-white/20"
-                >
-                  חזרה לדף הבית
-                </Button>
-              </div>
-            </header>
-            
-            {gameData.content?.stages && stagesForJourneyMap.length > 0 && (
-              <div className="container mx-auto my-4 px-4">
-                <JourneyMap 
-                  stages={stagesForJourneyMap}
-                  currentStage={currentStage?.id}
-                  completedStages={completedStages}
-                  onStageClick={(stageId) => {
-                    // מעבר לשלב רק אם כבר הושלם
-                    if (completedStages.includes(stageId)) {
-                      const allStages = [
-                        ...(gameData.content.stages || []),
-                        gameData.content.intro,
-                        gameData.content.outro
-                      ].filter(Boolean);
-                      
-                      const stage = allStages.find(s => s?.id === stageId);
-                      
-                      if (stage) {
-                        setCurrentStage(stage);
+            <PageContainer className="flex flex-col min-h-screen">
+              <header className="bg-black bg-opacity-50 p-4 border-b border-white/10 sticky top-0 z-10">
+                <div className="container mx-auto flex justify-between items-center">
+                  <h1 className="text-2xl font-bold text-white">{gameData.name}</h1>
+                  <Button 
+                    onClick={() => navigate('/')}
+                    variant="outline"
+                    className="border-white text-white hover:bg-white/20"
+                  >
+                    חזרה לדף הבית
+                  </Button>
+                </div>
+              </header>
+              
+              {gameData.content?.stages && stagesForJourneyMap.length > 0 && (
+                <div className="container mx-auto my-4 px-4">
+                  <JourneyMap 
+                    stages={stagesForJourneyMap}
+                    currentStage={currentStage?.id}
+                    completedStages={completedStages}
+                    onStageClick={(stageId) => {
+                      // מעבר לשלב רק אם כבר הושלם
+                      if (completedStages.includes(stageId)) {
+                        const allStages = [
+                          ...(gameData.content.stages || []),
+                          gameData.content.intro,
+                          gameData.content.outro
+                        ].filter(Boolean);
+                        
+                        const stage = allStages.find(s => s?.id === stageId);
+                        
+                        if (stage) {
+                          setCurrentStage(stage);
+                        }
                       }
-                    }
-                  }}
-                />
-              </div>
-            )}
-            
-            <main className="container mx-auto p-4 pt-6 flex-grow">
-              <ScrollCard className="p-8">
-                {currentStage && (
-                  <>
-                    <h2 className="text-3xl font-bold mb-6 text-gray-800 border-b pb-2">
-                      {currentStage.title}
-                    </h2>
-                    
-                    {currentStage.description && (
-                      <p className="mb-6 text-gray-700">{currentStage.description}</p>
-                    )}
-                    
-                    {/* הצגת דמות מדברת אם יש */}
-                    {currentStage.character && currentStage.introDialogue && (
-                      <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        {currentStage.introDialogue.map((dialogue, index) => (
-                          <div key={index} className="mb-3 last:mb-0">
-                            <strong className="text-amber-800">{dialogue.character}: </strong>
-                            <span>{dialogue.text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* רכיב המשחק הדינמי */}
-                    {gameModuleComponent}
-                  </>
-                )}
-              </ScrollCard>
-            </main>
-            
-            <footer className="bg-black bg-opacity-50 p-4 text-center text-blue-300 text-sm border-t border-white/10">
-              &copy; {gameData.name} - משחק אינטראקטיבי
-            </footer>
+                    }}
+                  />
+                </div>
+              )}
+              
+              <main className="container mx-auto p-4 pt-6 flex-grow">
+                <GameContainer>
+                  {currentStage && (
+                    <>
+                      <StageHeading className="mb-6">
+                        {currentStage.title}
+                      </StageHeading>
+                      
+                      {currentStage.description && (
+                        <p className="mb-6 text-gray-700">{currentStage.description}</p>
+                      )}
+                      
+                      {/* הצגת דמות מדברת אם יש */}
+                      {currentStage.character && currentStage.introDialogue && (
+                        <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                          {currentStage.introDialogue.map((dialogue, index) => (
+                            <div key={index} className="mb-3 last:mb-0">
+                              <strong className="text-amber-800">{dialogue.character}: </strong>
+                              <span>{dialogue.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* רכיב המשחק הדינמי */}
+                      {gameModuleComponent}
+                    </>
+                  )}
+                </GameContainer>
+              </main>
+              
+              <footer className="bg-black bg-opacity-50 p-4 text-center text-blue-300 text-sm border-t border-white/10">
+                &copy; {gameData.name} - משחק אינטראקטיבי
+              </footer>
+            </PageContainer>
           </GameEngine>
         )}
       </div>
     </ThemeProvider>
   );
 }
-
-export default GamePage;
