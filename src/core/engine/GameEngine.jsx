@@ -23,26 +23,38 @@ export function GameEngine({
   const [gameConfig, setGameConfig] = useState(null);
   const [gameContent, setGameContent] = useState(null);
   const [characters, setCharacters] = useState({});
-  const [theme, setTheme] = useState('base');
+  const [theme, setTheme] = useState('default');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   // לוג לקונסולה לדיבוג
   console.log("GameEngine initialized with gameId:", gameId);
 
-  // טיפול בטיימאאוט טעינה
+  // טיפול בטיימאאוט טעינה - זמן קצר יותר (7 שניות במקום 10)
   useEffect(() => {
+    // הגדרת טיימרים מדורגים לבדיקת התקדמות הטעינה
+    const halfTimeout = setTimeout(() => {
+      if (isLoading) {
+        // עדכון התקדמות ל-50% אחרי 3 שניות
+        setLoadingProgress(50);
+      }
+    }, 3000); // 3 שניות
+    
     // טיימר לבדיקת טעינה תקועה
-    const timeout = setTimeout(() => {
+    const fullTimeout = setTimeout(() => {
       if (isLoading) {
         setLoadingTimeout(true);
         LoggerService.warn('[GameEngine] Loading timeout occurred');
         console.warn('[GameEngine] Loading timeout occurred');
       }
-    }, 10000); // 10 שניות
+    }, 7000); // 7 שניות
     
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(halfTimeout);
+      clearTimeout(fullTimeout);
+    };
   }, [isLoading]);
 
   // טעינת נתוני המשחק
@@ -51,6 +63,7 @@ export function GameEngine({
       setIsLoading(true);
       setError(null);
       setLoadingTimeout(false);
+      setLoadingProgress(10); // התחלנו טעינה
 
       try {
         console.log(`[GameEngine] Starting to load game: ${gameId}`);
@@ -63,20 +76,41 @@ export function GameEngine({
           // לא נפסיק את הטעינה אם יש שגיאה בנכסים
         });
         
-        // טעינה במקביל של קונפיגורציה, תוכן ותמה
+        setLoadingProgress(30); // התקדמנו בטעינה
+        
+        // טעינה במקביל של קונפיגורציה ותוכן
         console.log(`[GameEngine] Loading game configuration and content`);
-        const [config, content, themeId] = await Promise.all([
+        const [config, content] = await Promise.all([
           ContentLoader.loadGameConfig(gameId),
-          ContentLoader.loadGameContent(gameId),
-          ContentLoader.loadTheme(gameId)
+          ContentLoader.loadGameContent(gameId)
         ]);
         
-        console.log(`[GameEngine] Game config loaded:`, config);
-        console.log(`[GameEngine] Theme loaded:`, themeId);
+        setLoadingProgress(60); // התקדמות נוספת
         
+        console.log(`[GameEngine] Game config loaded:`, config);
         setGameConfig(config);
         setGameContent(content);
-        setTheme(themeId);
+        
+        // טעינת התמה - עם אפשרות גיבוי אם יש שגיאה
+        try {
+          const themeId = await ContentLoader.loadTheme(gameId);
+          console.log(`[GameEngine] Theme loaded:`, themeId);
+          
+          // וידוא שיש תמה תקינה
+          if (!themes[themeId]) {
+            LoggerService.warn(`[GameEngine] Theme ${themeId} not found, using default theme`);
+            console.warn(`[GameEngine] Theme ${themeId} not found, using default theme`);
+            setTheme('default');
+          } else {
+            setTheme(themeId);
+          }
+        } catch (themeError) {
+          LoggerService.warn('[GameEngine] Could not load theme:', themeError);
+          console.warn('[GameEngine] Could not load theme:', themeError);
+          setTheme('default');
+        }
+        
+        setLoadingProgress(80); // התקדמות נוספת
         
         // טעינת דמויות (אם יש) - בנפרד כי הן אופציונליות
         try {
@@ -90,22 +124,21 @@ export function GameEngine({
           setCharacters({});
         }
 
-        // וידוא שיש תמה תקינה
-        if (!themes[themeId]) {
-          LoggerService.warn(`[GameEngine] Theme ${themeId} not found, using base theme`);
-          console.warn(`[GameEngine] Theme ${themeId} not found, using base theme`);
-          setTheme('base');
-        }
-
+        setLoadingProgress(100); // סיימנו את הטעינה
+        
         // קריאה לקולבק עם כל הנתונים
         if (onGameLoad) {
           console.log(`[GameEngine] Calling onGameLoad callback`);
-          onGameLoad({ 
-            config, 
-            content, 
-            characters,
-            theme: themeId
-          });
+          
+          // אם הטיימאאוט כבר התרחש, נדלג על הקולבק
+          if (!loadingTimeout) {
+            onGameLoad({ 
+              config, 
+              content, 
+              characters,
+              theme: theme
+            });
+          }
         }
 
       } catch (err) {
@@ -123,7 +156,7 @@ export function GameEngine({
     if (gameId) {
       loadGame();
     }
-  }, [gameId, onGameLoad, onError]);
+  }, [gameId, onGameLoad, onError, loadingTimeout]);
 
   // פונקציה לניסיון טעינה מחדש
   const handleRetry = () => {
@@ -131,6 +164,7 @@ export function GameEngine({
     setIsLoading(true);
     setLoadingTimeout(false);
     setError(null);
+    setLoadingProgress(0);
     
     // ניקוי המטמון לפני ניסיון טעינה חדש
     AssetManager.clearCache();
@@ -139,11 +173,15 @@ export function GameEngine({
     setTimeout(() => {
       const loadFunc = async () => {
         try {
+          setLoadingProgress(20);
+          
           const [config, content, themeId] = await Promise.all([
             ContentLoader.loadGameConfig(gameId),
             ContentLoader.loadGameContent(gameId),
             ContentLoader.loadTheme(gameId)
           ]);
+          
+          setLoadingProgress(70);
           
           setGameConfig(config);
           setGameContent(content);
@@ -156,6 +194,8 @@ export function GameEngine({
           } catch (e) {
             setCharacters({});
           }
+          
+          setLoadingProgress(100);
           
           if (onGameLoad) {
             onGameLoad({ config, content, characters, theme: themeId });
@@ -173,7 +213,45 @@ export function GameEngine({
       };
       
       loadFunc();
-    }, 500);
+    }, 300);
+  };
+
+  // צפייה בגמול משחק גם בלי נתונים מלאים
+  const handleForceStart = () => {
+    // שימוש בנתונים מינימליים אם אין נתונים מלאים
+    const minimalConfig = gameConfig || {
+      id: gameId,
+      name: gameId,
+      template: 'questJourney',
+      theme: 'default'
+    };
+    
+    const minimalContent = gameContent || {
+      intro: {
+        title: "התחלת המשחק",
+        description: "התחלנו את המשחק במצב משאבים מינימליים"
+      },
+      stages: []
+    };
+    
+    const gameData = {
+      ...minimalConfig,
+      id: gameId,
+      content: minimalContent,
+      characters: characters || {},
+      theme: theme || 'default'
+    };
+    
+    console.log("[GameEngine] Starting game with minimal data:", gameData);
+    
+    if (onGameLoad) {
+      onGameLoad(gameData);
+    }
+    
+    setGameConfig(minimalConfig);
+    setGameContent(minimalContent);
+    setIsLoading(false);
+    setLoadingTimeout(false);
   };
 
   if (isLoading) {
@@ -184,18 +262,29 @@ export function GameEngine({
             type="spinner" 
             size="large" 
             color="primary" 
-            text="טוען משחק..." 
+            text={`טוען משחק... ${loadingProgress}%`} 
           />
           
           {loadingTimeout && (
             <div className="mt-6">
-              <p className="text-amber-600 mb-4">הטעינה לוקחת זמן רב מהצפוי.</p>
-              <Button 
-                onClick={handleRetry}
-                variant="primary"
-              >
-                נסה שוב
-              </Button>
+              <p className="text-amber-600 mb-2">הטעינה לוקחת זמן רב מהצפוי.</p>
+              <div className="flex flex-col md:flex-row gap-3 mt-4 justify-center">
+                <Button 
+                  onClick={handleRetry}
+                  variant="primary"
+                  className="flex-1"
+                >
+                  נסה שוב
+                </Button>
+                
+                <Button 
+                  onClick={handleForceStart}
+                  variant="secondary"
+                  className="flex-1"
+                >
+                  התחל בכל זאת
+                </Button>
+              </div>
             </div>
           )}
           
@@ -204,6 +293,7 @@ export function GameEngine({
             <div className="mt-4 p-2 bg-gray-100 rounded text-left text-xs opacity-75">
               <div>Debug: Loading game "{gameId}"</div>
               <div>Timeout triggered: {loadingTimeout ? "yes" : "no"}</div>
+              <div>Progress: {loadingProgress}%</div>
             </div>
           )}
         </GlassCard>
@@ -217,12 +307,24 @@ export function GameEngine({
         <GlassCard className="p-8 text-center max-w-md">
           <h2 className="text-2xl font-bold text-red-700 mb-4">שגיאה בטעינת המשחק</h2>
           <p className="mb-6">{error}</p>
-          <Button 
-            onClick={handleRetry}
-            variant="primary"
-          >
-            נסה שוב
-          </Button>
+          
+          <div className="flex flex-col md:flex-row gap-3 mt-4 justify-center">
+            <Button 
+              onClick={handleRetry}
+              variant="primary"
+              className="flex-1"
+            >
+              נסה שוב
+            </Button>
+            
+            <Button 
+              onClick={handleForceStart}
+              variant="secondary"
+              className="flex-1"
+            >
+              התחל בכל זאת
+            </Button>
+          </div>
           
           {/* דיבוג */}
           {process.env.NODE_ENV !== "production" && (
