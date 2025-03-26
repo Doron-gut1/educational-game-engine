@@ -26,6 +26,8 @@ import {
 } from '../design-system/components';
 
 export function GamePage() {
+  console.log("GamePage rendering, gameId:", useParams().gameId);
+
   const { gameId } = useParams();
   const navigate = useNavigate();
   
@@ -36,6 +38,60 @@ export function GamePage() {
   const [backgroundPath, setBackgroundPath] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({});
+  
+  // הוספת useEffect לדיבוג
+  useEffect(() => {
+    console.log("GamePage mounted with gameId:", gameId);
+    
+    // התערבות מוקדמת לבדיקה אם קובץ data.json קיים
+    const checkDataJsonExists = async () => {
+      try {
+        const response = await fetch(`/data.json`);
+        console.log("Global data.json exists:", response.ok);
+      } catch (err) {
+        console.log("Error checking global data.json:", err);
+      }
+      
+      try {
+        const response = await fetch(`/assets/games/${gameId}/data.json`);
+        console.log(`Game data.json for ${gameId} exists:`, response.ok);
+      } catch (err) {
+        console.log(`Error checking game data.json for ${gameId}:`, err);
+      }
+    };
+    
+    checkDataJsonExists();
+    
+    // בדיקת קיום תיקיות חיוניות
+    const checkEssentialFolders = async () => {
+      const foldersToCheck = [
+        `/assets/games/${gameId}/backgrounds`,
+        `/assets/shared/placeholders`
+      ];
+      
+      const results = {};
+      
+      for (const folder of foldersToCheck) {
+        try {
+          // ננסה לטעון קובץ דמיוני מהתיקייה כדי לבדוק אם יש תשובת 404
+          const response = await fetch(`${folder}/check.txt`);
+          results[folder] = response.status !== 404 ? "Possibly exists" : "404 - Not Found";
+        } catch (err) {
+          results[folder] = `Error: ${err.message}`;
+        }
+      }
+      
+      console.log("Essential folders check:", results);
+      setDebugInfo(prev => ({ ...prev, folderCheck: results }));
+    };
+    
+    checkEssentialFolders();
+    
+    return () => {
+      console.log("GamePage unmounting");
+    };
+  }, [gameId]);
   
   // טיפול בסיום משחק
   const handleGameComplete = useCallback((finalScore) => {
@@ -47,6 +103,8 @@ export function GamePage() {
   // טיפול בשגיאת טעינה
   const handleLoadError = useCallback((error) => {
     LoggerService.error('Error loading game:', error);
+    console.error("Game loading error:", error);
+    setDebugInfo(prev => ({ ...prev, loadError: error.message || String(error) }));
     setError('שגיאה בטעינת המשחק: ' + (error.message || 'לא ידוע'));
     setLoading(false);
   }, []);
@@ -58,6 +116,7 @@ export function GamePage() {
       if (loading) {
         setLoadingTimeout(true);
         LoggerService.warn('Loading timeout occurred');
+        console.warn("Loading timeout occurred");
       }
     }, 10000); // 10 שניות
     
@@ -66,38 +125,56 @@ export function GamePage() {
   
   // טיפול בטעינת משחק
   const handleGameLoad = useCallback((data) => {
+    console.log("Game data loaded:", data);
+    setDebugInfo(prev => ({ ...prev, gameDataLoaded: true, gameId }));
+    
     try {
       setGameData(data);
       
       // עדכון רקע ראשוני
       if (gameId && data?.content?.stages) {
         const initialStage = data.content.stages[0];
+        console.log("Initial stage:", initialStage);
         
         if (initialStage) {
           setCurrentStage(initialStage);
+          setDebugInfo(prev => ({ 
+            ...prev, 
+            initialStage: initialStage.id, 
+            stageType: initialStage.type 
+          }));
           
           // עדכון רקע אם קיים
           if (initialStage.background) {
-            setBackgroundPath(AssetManager.getAssetPath(gameId, initialStage.background, 'backgrounds'));
+            const bgPath = AssetManager.getAssetPath(gameId, initialStage.background, 'backgrounds');
+            console.log("Setting background from stage:", bgPath);
+            setBackgroundPath(bgPath);
           } else {
             // אם אין רקע ספציפי לשלב, לקחת את רקע ברירת המחדל של המשחק
-            setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
+            const defaultBgPath = AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds');
+            console.log("Using default background:", defaultBgPath);
+            setBackgroundPath(defaultBgPath);
           }
         }
       }
       
       // טעינה מקדימה של נכסים
       if (gameId) {
+        console.log("Preloading essential assets for:", gameId);
         AssetManager.preloadEssentialAssets(gameId).catch(err => {
+          console.warn("Assets preload failed:", err);
           LoggerService.warn("טעינה מוקדמת של נכסים נכשלה:", err);
+          setDebugInfo(prev => ({ ...prev, assetsPreloadError: err.message }));
           // ממשיכים למרות השגיאה כדי לאפשר למשחק לפעול
         });
       }
       
       setLoading(false);
     } catch (error) {
+      console.error("Error processing game data:", error);
       LoggerService.error('Error processing game data:', error);
       setError('שגיאה בעיבוד נתוני המשחק');
+      setDebugInfo(prev => ({ ...prev, processingError: error.message }));
       setLoading(false);
     }
   }, [gameId]);
@@ -106,22 +183,28 @@ export function GamePage() {
   useEffect(() => {
     if (currentStage?.background && gameId) {
       const bgPath = AssetManager.getAssetPath(gameId, currentStage.background, 'backgrounds');
+      console.log("Checking background:", bgPath);
       
       // בדיקה אם הרקע קיים
       fetch(bgPath, { method: 'HEAD' })
         .then(response => {
+          console.log("Background check response:", response.status);
           if (response.ok) {
             setBackgroundPath(bgPath);
           } else {
             // אם הרקע לא נמצא, שימוש ברקע ברירת מחדל
             LoggerService.warn(`Background not found: ${bgPath}, using default`);
-            setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
+            const defaultBg = AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds');
+            console.log("Using default background instead:", defaultBg);
+            setBackgroundPath(defaultBg);
           }
         })
-        .catch(() => {
+        .catch((err) => {
           // במקרה של שגיאת רשת, שימוש ברקע ברירת מחדל
+          console.error("Background check failed:", err);
           LoggerService.warn(`Failed to check background: ${bgPath}, using default`);
-          setBackgroundPath(AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds'));
+          const defaultBg = AssetManager.getAssetPath(gameId, 'scroll_background.jpg', 'backgrounds');
+          setBackgroundPath(defaultBg);
         });
     }
   }, [currentStage, gameId]);
@@ -162,6 +245,8 @@ export function GamePage() {
   const gameModuleComponent = useMemo(() => {
     if (!currentStage) return null;
     
+    console.log("Rendering game module for stage type:", currentStage.type);
+    
     switch (currentStage.type) {
       case 'multi_choice':
         return (
@@ -200,7 +285,10 @@ export function GamePage() {
       case 'multi_stage':
         // טיפול במשחק מרובה-שלבים
         const currentChallenge = currentStage.challenges?.[0];
+        console.log("multi_stage challenges:", currentStage.challenges);
+        
         if (!currentChallenge) {
+          console.error("No challenges found for multi_stage!");
           return <div>שגיאה: לא נמצאו אתגרים בשלב זה</div>;
         }
 
@@ -243,6 +331,22 @@ export function GamePage() {
           default:
             return <div>סוג אתגר לא נתמך: {currentChallenge.type}</div>;
         }
+      
+      case 'story_intro':
+      case 'story_conclusion':
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+            <h2 className="text-2xl font-bold mb-4">{currentStage.title}</h2>
+            <p className="mb-4">{currentStage.description}</p>
+            <Button 
+              variant="primary" 
+              className="mt-4"
+              onClick={() => handleStageComplete(currentStage.id, 100)}
+            >
+              המשך ➔
+            </Button>
+          </div>
+        );
       
       default:
         return <div>סוג משחק לא נתמך: {currentStage.type}</div>;
@@ -312,6 +416,8 @@ export function GamePage() {
   const handleImageError = useCallback((e) => {
     if (!e || !e.target) return;
     
+    console.log("Image load error:", e.target.src);
+    
     // מניעת לולאות אינסופיות
     e.target.onerror = null;
     
@@ -360,7 +466,7 @@ export function GamePage() {
           <div className="flex h-screen items-center justify-center">
             <GlassCard className="p-10 text-center">
               <LoadingIndicator 
-                type="scroll" 
+                type="spinner" 
                 size="large" 
                 color="accent" 
                 text="טוען משחק..." 
@@ -462,6 +568,28 @@ export function GamePage() {
               </footer>
             </PageContainer>
           </GameEngine>
+        )}
+        
+        {/* פאנל דיבוג */}
+        {process.env.NODE_ENV !== "production" && (
+          <div className="fixed bottom-4 left-4 bg-white bg-opacity-90 p-3 rounded shadow-md text-xs z-50 max-w-sm">
+            <details>
+              <summary className="font-bold cursor-pointer mb-1">DEBUG INFO (GamePage)</summary>
+              <div className="space-y-1">
+                <div>Game ID: {gameId || "none"}</div>
+                <div>Loading: {loading ? "yes" : "no"}</div>
+                <div>Timeout: {loadingTimeout ? "yes" : "no"}</div>
+                <div>Error: {error || "none"}</div>
+                <div>Current Stage: {currentStage?.id || "none"}</div>
+                <div>Background: {backgroundPath || "none"}</div>
+                <div className="overflow-auto max-h-32">
+                  <pre className="text-xs">
+                    {JSON.stringify(debugInfo, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </details>
+          </div>
         )}
       </div>
     </ThemeProvider>

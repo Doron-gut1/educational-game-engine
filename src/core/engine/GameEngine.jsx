@@ -28,6 +28,9 @@ export function GameEngine({
   const [error, setError] = useState(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
+  // לוג לקונסולה לדיבוג
+  console.log("GameEngine initialized with gameId:", gameId);
+
   // טיפול בטיימאאוט טעינה
   useEffect(() => {
     // טיימר לבדיקת טעינה תקועה
@@ -35,6 +38,7 @@ export function GameEngine({
       if (isLoading) {
         setLoadingTimeout(true);
         LoggerService.warn('[GameEngine] Loading timeout occurred');
+        console.warn('[GameEngine] Loading timeout occurred');
       }
     }, 10000); // 10 שניות
     
@@ -49,19 +53,26 @@ export function GameEngine({
       setLoadingTimeout(false);
 
       try {
+        console.log(`[GameEngine] Starting to load game: ${gameId}`);
+        
         // טעינה מוקדמת של נכסים חיוניים למשחק (בלי להמתין לסיום)
         LoggerService.info(`[GameEngine] Preloading essential assets for ${gameId}`);
         AssetManager.preloadEssentialAssets(gameId).catch(err => {
           LoggerService.warn('[GameEngine] Assets preload error:', err);
+          console.warn('[GameEngine] Assets preload error:', err);
           // לא נפסיק את הטעינה אם יש שגיאה בנכסים
         });
         
         // טעינה במקביל של קונפיגורציה, תוכן ותמה
+        console.log(`[GameEngine] Loading game configuration and content`);
         const [config, content, themeId] = await Promise.all([
           ContentLoader.loadGameConfig(gameId),
           ContentLoader.loadGameContent(gameId),
           ContentLoader.loadTheme(gameId)
         ]);
+        
+        console.log(`[GameEngine] Game config loaded:`, config);
+        console.log(`[GameEngine] Theme loaded:`, themeId);
         
         setGameConfig(config);
         setGameContent(content);
@@ -70,9 +81,11 @@ export function GameEngine({
         // טעינת דמויות (אם יש) - בנפרד כי הן אופציונליות
         try {
           const chars = await ContentLoader.loadCharacters(gameId);
+          console.log(`[GameEngine] Characters loaded:`, Object.keys(chars).length);
           setCharacters(chars);
         } catch (charError) {
           // דמויות הן אופציונליות, כך שאם הטעינה נכשלת - לא קריטי
+          console.warn('[GameEngine] Could not load characters:', charError);
           LoggerService.warn('[GameEngine] Could not load characters:', charError);
           setCharacters({});
         }
@@ -80,11 +93,13 @@ export function GameEngine({
         // וידוא שיש תמה תקינה
         if (!themes[themeId]) {
           LoggerService.warn(`[GameEngine] Theme ${themeId} not found, using base theme`);
+          console.warn(`[GameEngine] Theme ${themeId} not found, using base theme`);
           setTheme('base');
         }
 
         // קריאה לקולבק עם כל הנתונים
         if (onGameLoad) {
+          console.log(`[GameEngine] Calling onGameLoad callback`);
           onGameLoad({ 
             config, 
             content, 
@@ -94,6 +109,7 @@ export function GameEngine({
         }
 
       } catch (err) {
+        console.error('[GameEngine] Error loading game:', err);
         LoggerService.error('[GameEngine] Error loading game:', err);
         setError(err.message || 'Failed to load game');
         if (onError) {
@@ -111,6 +127,7 @@ export function GameEngine({
 
   // פונקציה לניסיון טעינה מחדש
   const handleRetry = () => {
+    console.log(`[GameEngine] Retrying to load game: ${gameId}`);
     setIsLoading(true);
     setLoadingTimeout(false);
     setError(null);
@@ -164,7 +181,7 @@ export function GameEngine({
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100 p-4">
         <GlassCard className="p-8 text-center max-w-md">
           <LoadingIndicator 
-            type="scroll" 
+            type="spinner" 
             size="large" 
             color="primary" 
             text="טוען משחק..." 
@@ -179,6 +196,14 @@ export function GameEngine({
               >
                 נסה שוב
               </Button>
+            </div>
+          )}
+          
+          {/* דיבוג */}
+          {process.env.NODE_ENV !== "production" && (
+            <div className="mt-4 p-2 bg-gray-100 rounded text-left text-xs opacity-75">
+              <div>Debug: Loading game "{gameId}"</div>
+              <div>Timeout triggered: {loadingTimeout ? "yes" : "no"}</div>
             </div>
           )}
         </GlassCard>
@@ -198,6 +223,14 @@ export function GameEngine({
           >
             נסה שוב
           </Button>
+          
+          {/* דיבוג */}
+          {process.env.NODE_ENV !== "production" && (
+            <div className="mt-4 p-2 bg-gray-100 rounded text-left text-xs opacity-75">
+              <div>Debug: Error loading game "{gameId}"</div>
+              <div>Error: {error}</div>
+            </div>
+          )}
         </GlassCard>
       </div>
     );
