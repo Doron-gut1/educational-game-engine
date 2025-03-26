@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400">
+  <!-- רבי אלעזר הסופר - דמות סכמטית בסגנון יהודי עתיק -->
+  
+  <!-- רקע שקוף -->
+  <rect width="300" height="400" fill="none" />
+  
+  <!-- גלימה -->
+  <path d="M150,80 C120,80 95,90 80,110 C60,140 50,180 50,280 C50,330 100,380 150,380 C200,380 250,330 250,280 C250,180 240,140 220,110 C205,90 180,80 150,80 Z"
+        fill="#4A4068" stroke="#2A2040" stroke-width="2"/>
+  
+  <!-- ראש -->
+  <circle cx="150" cy="70" r="50" fill="#F8D5A3" stroke="#2A2040" stroke-width="2"/>
+  
+  <!-- זקן -->
+  <path d="M150,90 C130,90 120,100 110,120 C100,150 105,180 150,210 C195,180 200,150 190,120 C180,100 170,90 150,90 Z"
+        fill="#D2B48C" stroke="#2A2040" stroke-width="1"/>
+  
+  <!-- טורבן/כיסוי ראש -->
+  <path d="M150,30 C110,30 100,50 100,70 C100,80 110,90 150,90 C190,90 200,80 200,70 C200,50 190,30 150,30 Z"
+        fill="#DDD0B1" stroke="#2A2040" stroke-width="2"/>
+  <path d="M110,50 C130,60 170,60 190,50" stroke="#2A2040" stroke-width="1" fill="none"/>
+  
+  <!-- פנים - עיניים ופה -->
+  <ellipse cx="130" cy="70" rx="5" ry="3" fill="#2A2040"/>
+  <ellipse cx="170" cy="70" rx="5" ry="3" fill="#2A2040"/>
+  <path d="M140,85 C145,88 155,88 160,85" stroke="#2A2040" stroke-width="1" fill="none"/>
+  
+  <!-- ידיים אוחזות מגילה -->
+  <path d="M100,200 C90,220 100,240 120,250" stroke="#F8D5A3" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M200,200 C210,220 200,240 180,250" stroke="#F8D5A3" stroke-width="10" fill="none" stroke-linecap="round"/>
+  
+  <!-- מגילה -->
+  <path d="M120,250 L180,250 L180,210 C180,200 170,190 150,190 C130,190 120,200 120,210 Z"
+        fill="#EEEAC9" stroke="#AA8E6A" stroke-width="2"/>
+  <path d="M125,210 L175,210" stroke="#AA8E6A" stroke-width="1"/>
+  <path d="M125,220 L175,220" stroke="#AA8E6A" stroke-width="1"/>
+  <path d="M125,230 L175,230" stroke="#AA8E6A" stroke-width="1"/>
+  <path d="M125,240 L175,240" stroke="#AA8E6A" stroke-width="1"/>
+  
+  <!-- גלילי המגילה -->
+  <rect x="115" y="245" width="10" height="30" rx="5" fill="#AA8E6A"/>
+  <rect x="175" y="245" width="10" height="30" rx="5" fill="#AA8E6A"/>
+</svg>
