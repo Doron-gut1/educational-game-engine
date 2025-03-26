@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GameContainer } from '../../components/layout/GameContainer';
+import { GameContainer } from '../../design-system/components/GameContainer';
 import { GameManager } from '../../components/GameManager';
 import { LoggerService } from '../../services';
 import { DevTools } from '../../components/dev/DevTools';

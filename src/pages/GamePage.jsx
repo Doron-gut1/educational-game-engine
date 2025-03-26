@@ -94,7 +94,9 @@ export function GamePage() {
   }, [gameId]);
   
   // טיפול בסיום משחק
-  const handleGameComplete = useCallback((finalScore) => {
+  const handleGameComplete =
+  console.log('GamePage - handleGameLoad called with data:', data); 
+     useCallback((finalScore) => {
     LoggerService.info(`Game completed with score: ${finalScore}`);
     // אפשרות להצגת חלון סיכום או ניווט לדף הבית
     navigate('/');
@@ -118,17 +120,36 @@ export function GamePage() {
         LoggerService.warn('Loading timeout occurred');
         console.warn("Loading timeout occurred");
       }
-    }, 10000); // 10 שניות
+    }, 1000000); // 10 שניות
     
     return () => clearTimeout(timeout);
   }, [loading]);
   
   // טיפול בטעינת משחק
-  const handleGameLoad = useCallback((data) => {
+  const handleGameLoad = useCallback((data = {}) => {
+
     console.log("Game data loaded:", data);
+  
     setDebugInfo(prev => ({ ...prev, gameDataLoaded: true, gameId }));
+  
     
+  
     try {
+  
+      if (!data) {
+  
+        console.error("Received null or undefined data in handleGameLoad");
+  
+        setError('שגיאה בטעינת נתוני המשחק: אין נתונים');
+  
+        setLoading(false);
+  
+        return;
+  
+      }
+  
+      
+  
       setGameData(data);
       
       // עדכון רקע ראשוני
@@ -486,10 +507,26 @@ export function GamePage() {
             </GlassCard>
           </div>
         ) : (
+            /* 
+                      <GameEngine
+              gameId={gameId}
+              onGameLoad={(data) => {
+                console.log('Direct onGameLoad callback', data);
+                handleGameLoad(data);
+              }}
+              onError={handleLoadError}
+            >
+              <PageContainer className="flex flex-col min-h-screen">
+                // תוכן אותו דבר...
+              </PageContainer>
+            </GameEngine> */
           // חלק משחק פעיל
           <GameEngine
             gameId={gameId}
-            onGameLoad={handleGameLoad}
+            onGameLoad={(data) => {
+              console.log('Direct onGameLoad callback', data);
+              handleGameLoad(data);
+            }}
             onError={handleLoadError}
           >
             <PageContainer className="flex flex-col min-h-screen">
