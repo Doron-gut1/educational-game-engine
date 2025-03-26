@@ -1,0 +1,1 @@
+Asset verification file. This file is used by the assetManager to verify the existence of this directory.
