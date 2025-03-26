@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#F0F4F9"/>
+  <rect x="160" y="120" width="80" height="60" rx="4" fill="#B0BEC5"/>
+  <path d="M200 100 L220 130 L180 130 Z" fill="#B0BEC5"/>
+  <circle cx="240" cy="90" r="15" fill="#FFCA28"/>
+  <text x="200" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#607D8B">
+    תמונה חסרה
+  </text>
+</svg>
