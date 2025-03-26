@@ -29,6 +29,9 @@ export class AssetManager {
     images: '/assets/shared/placeholders/image_placeholder.svg',
     audio: null // אין ברירת מחדל לאודיו
   };
+  
+  // משתנה לשמירת תוצאות בדיקת קיום תיקיות
+  static verifiedFolders = {};
 
   // תיקיות חלופיות לחיפוש נכסים אם לא נמצאו במיקום הראשי
   static alternativePaths = {
@@ -48,17 +51,18 @@ export class AssetManager {
     LoggerService.info(`[AssetManager] טוען נכסים חיוניים למשחק ${gameId}`);
     
     try {
+      // בדיקת קיום תיקיות חיוניות לפני טעינת נכסים
+      await this.verifyEssentialFolders(gameId);
+      
       // אם לא הועברה רשימה ספציפית, ניתן לקבוע קבוצות ברירת מחדל
       const defaultAssets = [
         // רקעים חיוניים
         { type: 'backgrounds', path: 'scroll_background.jpg' },
         { type: 'backgrounds', path: 'intro_background.jpg' },
         { type: 'backgrounds', path: 'thumbnail.svg' },
-        // תוספת של רקעים נוספים שהיו מגיעים בהמשך
+        // רקעים שיהיו בשימוש מאוחר יותר
         { type: 'backgrounds', path: 'ancient_map_background.jpg' },
-        { type: 'backgrounds', path: 'covenant_background.jpg' },
-        { type: 'backgrounds', path: 'egypt_slavery_background.jpg' },
-        { type: 'backgrounds', path: 'burning_bush_background.jpg' }
+        { type: 'backgrounds', path: 'egypt_slavery_background.jpg' }
       ];
       
       const assetsToLoad = essentialAssets.length ? essentialAssets : defaultAssets;
@@ -86,6 +90,63 @@ export class AssetManager {
   }
   
   /**
+   * בדיקת קיום תיקיות חיוניות
+   * @param {string} gameId - מזהה המשחק
+   */
+  static async verifyEssentialFolders(gameId) {
+    if (this.verifiedFolders[gameId]) {
+      return this.verifiedFolders[gameId];
+    }
+    
+    // רשימת תיקיות לבדיקה
+    const foldersToCheck = [
+      `/assets/games/${gameId}/backgrounds`,
+      `/assets/shared/placeholders`
+    ];
+    
+    const results = {};
+    let success = true;
+    
+    for (const folderPath of foldersToCheck) {
+      try {
+        // ניסיון לטעון קובץ check.txt כדי לוודא שהתיקייה קיימת
+        const response = await fetch(`${folderPath}/check.txt`);
+        
+        // במקרה של 404 לקובץ check.txt, ננסה לבדוק אם התיקיה עצמה קיימת
+        if (response.status === 404) {
+          LoggerService.warn(`[AssetManager] check.txt לא נמצא בנתיב ${folderPath}. בודק קיום תיקייה...`);
+          
+          // פשוט נבדוק אם יש תמונות בתיקייה
+          const alternativeCheck = await fetch(`${folderPath}`);
+          
+          if (alternativeCheck.ok || alternativeCheck.status !== 404) {
+            results[folderPath] = "התיקייה קיימת אבל check.txt חסר";
+          } else {
+            results[folderPath] = "התיקייה לא נמצאה";
+            success = false;
+          }
+        } else if (response.ok) {
+          results[folderPath] = "נמצא";
+        } else {
+          results[folderPath] = `שגיאה ${response.status}`;
+          success = false;
+        }
+      } catch (error) {
+        LoggerService.error(`[AssetManager] שגיאה בבדיקת תיקייה ${folderPath}:`, error);
+        results[folderPath] = `שגיאה: ${error.message}`;
+        // לא נכשל לגמרי כי יכול להיות שהשגיאה זמנית
+      }
+    }
+    
+    LoggerService.info(`[AssetManager] בדיקת תיקיות: `, results);
+    
+    // שמירת התוצאות למניעת בדיקות חוזרות
+    this.verifiedFolders[gameId] = { success, results };
+    
+    return { success, results };
+  }
+  
+  /**
    * טעינת נכס עם מנגנון ניסיונות חוזרים ומדורגים
    * @param {string} assetPath - נתיב הנכס
    * @param {string} assetType - סוג הנכס (images, audio)
@@ -105,9 +166,9 @@ export class AssetManager {
         LoggerService.warn(`[AssetManager] ניסיון ${attempts + 1}/${maxRetries} נכשל עבור ${assetPath}: ${error.message}`);
         attempts++;
         
-        // המתנה לפני הניסיון הבא (אקספוננציאלי backoff)
+        // המתנה לפני הניסיון הבא (אקספוננציאלי backoff אך עם זמן קצר יותר)
         if (attempts < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, attempts)));
+          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)));
         }
       }
     }
@@ -133,15 +194,23 @@ export class AssetManager {
       }
     }
     
-    // אין ברירה אלא להחזיר שגיאה
-    throw lastError || new Error(`[AssetManager] כל הניסיונות לטעינת ${assetPath} נכשלו`);
+    // במצב של כישלון, יצירת אובייקט "ריק" במקום לזרוק שגיאה
+    LoggerService.error(`[AssetManager] כל הניסיונות לטעינת ${assetPath} נכשלו, מחזיר אובייקט ריק`);
+    
+    if (assetType === 'audio') {
+      // החזרת אובייקט אודיו ריק
+      return new Audio();
+    } else {
+      // החזרת אובייקט תמונה ריק בגודל מינימלי
+      const emptyImg = new Image();
+      emptyImg.width = 10;
+      emptyImg.height = 10;
+      return emptyImg;
+    }
   }
   
   /**
    * מחפש נתיב חלופי לנכס במקרה שהנתיב המקורי לא קיים
-   * @param {string} originalPath - הנתיב המקורי
-   * @param {string} assetType - סוג הנכס
-   * @returns {Promise<string|null>} - נתיב חלופי או null אם לא נמצא
    */
   static async findAlternativePath(originalPath, assetType) {
     // שימוש רק עם תמונות, לא עם אודיו
@@ -209,12 +278,12 @@ export class AssetManager {
           reject(new Error(`[AssetManager] שגיאה בטעינת אודיו ${assetPath}: ${error}`));
         };
         
-        // הגדרת טיימאאוט למניעת תקיעות
+        // הגדרת טיימאאוט למניעת תקיעות - קצר יותר מהקודם
         setTimeout(() => {
           if (audio.readyState === 0) { // לא התחיל לטעון
             reject(new Error(`[AssetManager] טיימאאוט בטעינת אודיו ${assetPath}`));
           }
-        }, 5000);
+        }, 3000); // קיצור הזמן ל-3 שניות
         
         // התחלת טעינה
         audio.load();
@@ -231,12 +300,12 @@ export class AssetManager {
           reject(new Error(`[AssetManager] שגיאה בטעינת תמונה ${assetPath}`));
         };
         
-        // הגדרת טיימאאוט למניעת תקיעות
+        // הגדרת טיימאאוט למניעת תקיעות - קצר יותר מהקודם
         setTimeout(() => {
           if (!img.complete) {
             reject(new Error(`[AssetManager] טיימאאוט בטעינת תמונה ${assetPath}`));
           }
-        }, 5000);
+        }, 3000); // קיצור הזמן ל-3 שניות
         
         img.src = assetPath;
       }
