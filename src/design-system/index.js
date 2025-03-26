@@ -1,35 +1,72 @@
-/**
- * ייצוא מרכזי של מערכת העיצוב "מסע הדעת"
- */
+// src/design-system/index.js
+// נקודת גישה מרכזית למערכת העיצוב - מאחדת את כל הרכיבים תחת ייבוא אחד
 
-// ייצוא התמות
-export * from './themes';
+import { ThemeProvider, useTheme } from './ThemeProvider';
 
-// ייצוא רכיבים
-export * from './components';
+// ייבוא כל רכיבי העיצוב
+import Button from './components/Button';
+import Card from './components/Card';
+import GlassCard from './components/GlassCard';
+import ScrollCard from './components/ScrollCard';
+import Heading from './components/Heading';
+import StageHeading from './components/StageHeading';
+import PageContainer from './components/PageContainer';
+import GameContainer from './components/GameContainer';
+import LoadingIndicator from './components/LoadingIndicator';
+import ProgressTracker from './components/ProgressTracker';
+import HintsPanel from './components/HintsPanel';
+import SourceReference from './components/SourceReference';
+import LearningPopup from './components/LearningPopup';
+import CharacterDialog from './components/CharacterDialog';
 
-// ייצוא ThemeProvider והוקים לשימוש בתמה
-export { ThemeProvider, useTheme, useThemeSetter } from './ThemeProvider';
+// ייבוא כל התמות
+import { themes } from './themes';
 
-// ייצוא מידע נוסף
-export const DESIGN_SYSTEM_VERSION = '1.0.0';
-export const DESIGN_SYSTEM_NAME = 'מסע הדעת';
+// ייצוא כל הרכיבים בנקודת גישה אחת
+export {
+  // ניהול תמה
+  ThemeProvider,
+  useTheme,
+  themes,
+  
+  // רכיבים בסיסיים
+  Button,
+  Card,
+  GlassCard,
+  ScrollCard,
+  Heading,
+  StageHeading,
+  
+  // רכיבי פריסה
+  PageContainer,
+  GameContainer,
+  
+  // רכיבי משחק
+  ProgressTracker,
+  HintsPanel,
+  SourceReference,
+  LearningPopup,
+  LoadingIndicator,
+  CharacterDialog
+};
 
-/**
- * מידע על מערכת העיצוב
- */
-export const designSystemInfo = {
-  name: DESIGN_SYSTEM_NAME,
-  version: DESIGN_SYSTEM_VERSION,
-  description: 'מערכת עיצוב למשחקים לימודיים אינטראקטיביים',
-  themes: ['base', 'passover', 'tuBishvat'],
-  components: {
-    buttons: ['Button', 'IconButton'],
-    cards: ['ScrollCard', 'GlassCard'],
-    navigation: ['JourneyMap', 'StageMarker'],
-  },
-  providers: ['ThemeProvider'],
-  hooks: ['useTheme', 'useThemeSetter'],
-  author: 'צוות פיתוח מנוע משחק מודולרי',
-  year: 2025
+// ייצוא כל המערכת כברירת מחדל
+export default {
+  ThemeProvider,
+  useTheme,
+  themes,
+  Button,
+  Card,
+  GlassCard,
+  ScrollCard,
+  Heading,
+  StageHeading,
+  PageContainer,
+  GameContainer,
+  ProgressTracker,
+  HintsPanel,
+  SourceReference,
+  LearningPopup,
+  LoadingIndicator,
+  CharacterDialog
 };
