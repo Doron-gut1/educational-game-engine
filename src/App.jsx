@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LoggerService } from './services';
-import './App.css';
+//import './App.css';
 
 // ייבוא מערכת העיצוב החדשה 
 import { ThemeProvider } from './design-system/ThemeProvider';
