@@ -3,12 +3,24 @@ import { LoggerService } from './loggerService';
 /**
  * שירות מורחב לניהול נכסי מדיה במשחק
  * תומך בטעינה מקדימה, מטמון, ניהול נכסים, ומנגנוני גיבוי
+ * גרסה 2.0 עם שיפורים רבים
  */
 export class AssetManager {
   // מאגר מטמון פנימי לנכסים כבר טעונים
   static assetsCache = {
     images: {},
     audio: {}
+  };
+  
+  // מטמון לתוצאות בדיקת קיום קבצים - לשיפור ביצועים
+  static pathExistenceCache = {};
+  
+  // סטטיסטיקות שימוש
+  static assetStats = {
+    checks: 0,
+    misses: 0,
+    hits: 0,
+    fallbacks: 0
   };
   
   // רשימת סוגי נכסים ותיקיות מתאימות
@@ -43,9 +55,48 @@ export class AssetManager {
   };
   
   /**
+   * בדיקת קיום של נכס בנתיב ספציפי
+   * עם מטמון תוצאות לשיפור ביצועים
+   */
+  static async verifyAssetExists(assetPath) {
+    this.assetStats.checks++;
+    
+    // בדיקה במטמון לשיפור ביצועים
+    if (this.pathExistenceCache[assetPath] !== undefined) {
+      return this.pathExistenceCache[assetPath];
+    }
+    
+    try {
+      const response = await fetch(assetPath, { 
+        method: 'HEAD', 
+        cache: 'no-store' // מניעת מטמון דפדפן
+      });
+      
+      const exists = response.ok;
+      
+      if (exists) {
+        this.assetStats.hits++;
+        LoggerService.debug(`[AssetManager] Asset verified: ${assetPath}`);
+      } else {
+        this.assetStats.misses++;
+        LoggerService.warn(`[AssetManager] Asset not found: ${assetPath} (status: ${response.status})`);
+      }
+      
+      // שמירה במטמון
+      this.pathExistenceCache[assetPath] = exists;
+      return exists;
+    } catch (error) {
+      this.assetStats.misses++;
+      LoggerService.error(`[AssetManager] Error verifying asset: ${assetPath}`, error);
+      
+      // שמירה במטמון כקובץ לא קיים במקרה של שגיאה
+      this.pathExistenceCache[assetPath] = false;
+      return false;
+    }
+  }
+  
+  /**
    * טעינה מוקדמת של נכסים הכרחיים
-   * @param {string} gameId - מזהה המשחק
-   * @param {Array} essentialAssets - רשימת נכסים הכרחיים לטעינה
    */
   static async preloadEssentialAssets(gameId, essentialAssets = []) {
     LoggerService.info(`[AssetManager] טוען נכסים חיוניים למשחק ${gameId}`);
@@ -75,7 +126,7 @@ export class AssetManager {
         // הכנת מערך הבטחות לטעינה מקבילה
         const loadPromises = batch.map(asset => {
           const fullPath = this.getAssetPath(gameId, asset.path, asset.type);
-          return this.preloadAssetWithRetry(fullPath, asset.type, 2);
+          return this.loadAssetSafely(gameId, asset.path, asset.type);
         });
         
         // המתנה לסיום הקבוצה הנוכחית לפני המשך לקבוצה הבאה
@@ -91,7 +142,6 @@ export class AssetManager {
   
   /**
    * בדיקת קיום תיקיות חיוניות
-   * @param {string} gameId - מזהה המשחק
    */
   static async verifyEssentialFolders(gameId) {
     if (this.verifiedFolders[gameId]) {
@@ -147,70 +197,8 @@ export class AssetManager {
   }
   
   /**
-   * טעינת נכס עם מנגנון ניסיונות חוזרים ומדורגים
-   * @param {string} assetPath - נתיב הנכס
-   * @param {string} assetType - סוג הנכס (images, audio)
-   * @param {number} maxRetries - מספר ניסיונות מקסימלי
-   */
-  static async preloadAssetWithRetry(assetPath, assetType = 'images', maxRetries = 2) {
-    let attempts = 0;
-    let lastError;
-    
-    // ניסיון טעינה רגיל
-    while (attempts < maxRetries) {
-      try {
-        const asset = await this.preloadAsset(assetPath, assetType);
-        return asset;
-      } catch (error) {
-        lastError = error;
-        LoggerService.warn(`[AssetManager] ניסיון ${attempts + 1}/${maxRetries} נכשל עבור ${assetPath}: ${error.message}`);
-        attempts++;
-        
-        // המתנה לפני הניסיון הבא (אקספוננציאלי backoff אך עם זמן קצר יותר)
-        if (attempts < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)));
-        }
-      }
-    }
-    
-    // ניסיון למצוא את הנכס במיקומים אלטרנטיביים
-    try {
-      const alternativePath = await this.findAlternativePath(assetPath, assetType);
-      if (alternativePath) {
-        LoggerService.info(`[AssetManager] נמצאה חלופה: ${alternativePath}`);
-        return await this.preloadAsset(alternativePath, assetType);
-      }
-    } catch (altError) {
-      LoggerService.warn(`[AssetManager] חיפוש חלופות נכשל:`, altError);
-    }
-    
-    // אם הגענו לכאן, כל הניסיונות נכשלו. ננסה את נכס ברירת המחדל
-    if (this.defaultAssets[assetType]) {
-      try {
-        LoggerService.info(`[AssetManager] משתמש בנכס ברירת מחדל: ${this.defaultAssets[assetType]}`);
-        return await this.preloadAsset(this.defaultAssets[assetType], assetType);
-      } catch (fallbackError) {
-        LoggerService.error(`[AssetManager] גם נכס ברירת המחדל נכשל:`, fallbackError);
-      }
-    }
-    
-    // במצב של כישלון, יצירת אובייקט "ריק" במקום לזרוק שגיאה
-    LoggerService.error(`[AssetManager] כל הניסיונות לטעינת ${assetPath} נכשלו, מחזיר אובייקט ריק`);
-    
-    if (assetType === 'audio') {
-      // החזרת אובייקט אודיו ריק
-      return new Audio();
-    } else {
-      // החזרת אובייקט תמונה ריק בגודל מינימלי
-      const emptyImg = new Image();
-      emptyImg.width = 10;
-      emptyImg.height = 10;
-      return emptyImg;
-    }
-  }
-  
-  /**
    * מחפש נתיב חלופי לנכס במקרה שהנתיב המקורי לא קיים
+   * גרסה משופרת עם חיפוש מקיף יותר
    */
   static async findAlternativePath(originalPath, assetType) {
     // שימוש רק עם תמונות, לא עם אודיו
@@ -221,37 +209,106 @@ export class AssetManager {
     
     if (!gameId || !fileName) return null;
     
-    const alternatives = this.alternativePaths[assetType] || [];
+    // מפת חיפוש חדשה - אלטרנטיבות בכל סוגי המיקומים
+    const searchPaths = [
+      // 1. חיפוש באותו gameId בסוגי נכסים שונים
+      ...Object.values(this.assetTypes).map(type => 
+        `/assets/games/${gameId}/${type}/${fileName}`
+      ),
+      
+      // 2. חיפוש בתיקייה הראשית של המשחק
+      `/assets/games/${gameId}/${fileName}`,
+      
+      // 3. חיפוש בתיקיית shared לפי סוג נכס
+      ...Object.values(this.assetTypes).map(type => 
+        `/assets/shared/${type}/${fileName}`
+      ),
+      
+      // 4. חיפוש בתיקיית placeholders
+      `/assets/shared/placeholders/${fileName}`,
+    ]
+    // נמנע כפילויות ומסיר את הנתיב המקורי
+    .filter((path, index, self) => path !== originalPath && self.indexOf(path) === index);
     
-    // בדיקת מיקומים חלופיים
-    for (const altType of alternatives) {
-      if (!altType) continue;
-      
-      const altPath = `/assets/games/${gameId}/${altType}/${fileName}`;
-      
-      // בדיקה האם הקובץ קיים (ניסיון לטעון אותו)
-      try {
-        const response = await fetch(altPath, { method: 'HEAD' });
-        if (response.ok) {
-          return altPath;
-        }
-      } catch (error) {
-        // התעלמות משגיאות - פשוט עוברים לאלטרנטיבה הבאה
+    // בדיקה רצינית של כל הנתיבים
+    for (const path of searchPaths) {
+      if (await this.verifyAssetExists(path)) {
+        LoggerService.info(`[AssetManager] נמצאה חלופה: ${path} (במקום ${originalPath})`);
+        this.assetStats.fallbacks++;
+        return path;
       }
     }
     
-    // ניסיון אחרון - לחפש בתיקיית shared
+    // לא נמצאה חלופה ספציפית, מחזיר ברירת מחדל כללית
+    return this.defaultAssets[assetType];
+  }
+  
+  /**
+   * טעינת נכס בצורה בטוחה עם ניסיונות חוזרים ומדורגים
+   * גרסה משופרת שמחזירה תמיד תוצאה
+   */
+  static async loadAssetSafely(gameId, assetPath, assetType = 'images', maxRetries = 2) {
+    // יצירת נתיב מלא ובדיקה במטמון
+    const fullPath = this.getAssetPath(gameId, assetPath, assetType);
+    
+    // בדיקה אם הנכס כבר במטמון
+    const cachedAsset = this.getCachedAsset(fullPath, assetType);
+    if (cachedAsset) {
+      return cachedAsset;
+    }
+    
+    let attempts = 0;
+    let lastError = null;
+    
+    // ניסיון טעינה רגיל עם מספר ניסיונות
+    while (attempts < maxRetries) {
+      try {
+        // ניסיון טעינה
+        const asset = await this.preloadAsset(fullPath, assetType);
+        return asset;
+      } catch (error) {
+        lastError = error;
+        LoggerService.warn(`[AssetManager] ניסיון ${attempts + 1}/${maxRetries} נכשל עבור ${fullPath}`, error);
+        attempts++;
+        
+        // המתנה לפני ניסיון נוסף
+        if (attempts < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(1.5, attempts)));
+        }
+      }
+    }
+    
+    // חיפוש חלופה
     try {
-      const sharedPath = `/assets/shared/${assetType}/${fileName}`;
-      const response = await fetch(sharedPath, { method: 'HEAD' });
-      if (response.ok) {
-        return sharedPath;
+      const alternativePath = await this.findAlternativePath(fullPath, assetType);
+      if (alternativePath) {
+        try {
+          return await this.preloadAsset(alternativePath, assetType);
+        } catch (error) {
+          LoggerService.error(`[AssetManager] גם טעינת חלופה נכשלה: ${alternativePath}`, error);
+        }
       }
     } catch (error) {
-      // התעלמות משגיאות
+      LoggerService.error(`[AssetManager] שגיאה בחיפוש חלופה: ${fullPath}`, error);
     }
     
-    return null;
+    // כישלון מוחלט - יצירת אובייקט חירום
+    LoggerService.error(`[AssetManager] כל הניסיונות לטעינת ${fullPath} נכשלו. יצירת אובייקט חירום.`);
+    
+    if (assetType === 'audio') {
+      // אודיו ריק
+      const emptyAudio = new Audio();
+      this.cacheAsset(fullPath, emptyAudio, assetType); // שמירה במטמון
+      return emptyAudio;
+    } else {
+      // תמונה בסיסית
+      const emptyImg = new Image();
+      emptyImg.width = 50;
+      emptyImg.height = 50;
+      emptyImg.src = this.defaultAssets[assetType] || this.defaultAssets.images;
+      this.cacheAsset(fullPath, emptyImg, assetType); // שמירה במטמון
+      return emptyImg;
+    }
   }
   
   /**
@@ -346,6 +403,19 @@ export class AssetManager {
       return assetPath;
     }
     
+    // בדיקה אם assetPath כולל תיקיה
+    if (assetPath.includes('/')) {
+      // נתיב שכבר כולל תיקיה - ננסה לזהות את סוג הנכס מהנתיב
+      const segments = assetPath.split('/');
+      const potentialType = segments[0].toLowerCase();
+      
+      // אם התיקיה היא סוג תקף של נכס, נשתמש בה ונסיר אותה מהנתיב
+      if (Object.values(this.assetTypes).includes(potentialType)) {
+        assetType = potentialType;
+        assetPath = segments.slice(1).join('/');
+      }
+    }
+    
     // וידוא שסוג הנכס חוקי
     const validType = this.assetTypes[assetType] || 'images';
     
@@ -355,22 +425,15 @@ export class AssetManager {
   
   /**
    * טעינת נכס או החזרתו מהמטמון
+   * גרסה משופרת באמצעות הפונקציה loadAssetSafely
    */
   static async getAsset(gameId, assetPath, assetType = 'images') {
-    const fullPath = this.getAssetPath(gameId, assetPath, assetType);
-    
-    // בדיקה אם הנכס כבר במטמון
-    const cachedAsset = this.getCachedAsset(fullPath, assetType);
-    if (cachedAsset) {
-      return cachedAsset;
-    }
-    
-    // טעינת הנכס אם אינו במטמון
-    return await this.preloadAssetWithRetry(fullPath, assetType);
+    return await this.loadAssetSafely(gameId, assetPath, assetType);
   }
   
   /**
    * פונקציית עזר לטיפול בשגיאות טעינת תמונה בתגיות img
+   * גרסה משופרת שמנסה למצוא חלופות לפני ברירת מחדל
    * @param {Event} errorEvent - אירוע השגיאה
    * @param {string} assetType - סוג הנכס
    */
@@ -388,6 +451,16 @@ export class AssetManager {
       LoggerService.info(`[AssetManager] משתמש בנכס ברירת מחדל: ${fallbackSrc}`);
       errorEvent.target.src = fallbackSrc;
     }
+    
+    // הוספת ניסיון אסינכרוני למציאת חלופה
+    this.findAlternativePath(originalSrc, assetType)
+      .then(alternativePath => {
+        if (alternativePath && alternativePath !== fallbackSrc) {
+          LoggerService.info(`[AssetManager] נמצאה חלופה אסינכרונית: ${alternativePath}`);
+          errorEvent.target.src = alternativePath;
+        }
+      })
+      .catch(() => {/* התעלם משגיאות */});
   }
   
   /**
@@ -401,7 +474,19 @@ export class AssetManager {
       Object.keys(this.assetsCache).forEach(cacheType => {
         this.assetsCache[cacheType] = {};
       });
-      LoggerService.info(`[AssetManager] כל המטמון נוקה`);
+      
+      // ניקוי מטמון בדיקות קיום
+      this.pathExistenceCache = {};
+      
+      // איפוס סטטיסטיקה
+      this.assetStats = {
+        checks: 0,
+        misses: 0,
+        hits: 0,
+        fallbacks: 0
+      };
+      
+      LoggerService.info(`[AssetManager] כל המטמון ומטמון הבדיקות נוקה`);
     }
   }
 }
