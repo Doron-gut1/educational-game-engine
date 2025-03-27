@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { defaultTheme } from './themes/defaultTheme';
 import { LoggerService } from './services';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 // Import game components
@@ -66,28 +67,27 @@ function App() {
     switch (selectedGame) {
       case 'passover':
         LoggerService.debug("Attempting to render PassoverQuestGame");
-        try {
-          return <PassoverQuestGame />;
-        } catch (error) {
-          LoggerService.error("Error rendering PassoverQuestGame:", error);
-          return (
-            <div className="min-h-screen bg-red-50 flex items-center justify-center p-4" dir="rtl">
-              <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg">
-                <h1 className="text-2xl font-bold mb-4 text-red-600">שגיאה בטעינת המשחק</h1>
-                <p className="mb-4">אירעה שגיאה בעת טעינת משחק הפסח</p>
-                <pre className="bg-red-50 p-4 rounded-md overflow-auto text-sm mb-4">
-                  {error.toString()}
-                </pre>
-                <button 
-                  onClick={() => setSelectedGame(null)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                >
-                  חזרה לבחירת משחק
-                </button>
+        // שימוש ב-ErrorBoundary לתפיסת שגיאות
+        return (
+          <ErrorBoundary
+            fallback={
+              <div className="min-h-screen bg-red-50 flex items-center justify-center p-4" dir="rtl">
+                <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg">
+                  <h1 className="text-2xl font-bold mb-4 text-red-600">שגיאה בטעינת המשחק</h1>
+                  <p className="mb-4">אירעה שגיאה בעת טעינת משחק הפסח</p>
+                  <button 
+                    onClick={() => setSelectedGame(null)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  >
+                    חזרה לבחירת משחק
+                  </button>
+                </div>
               </div>
-            </div>
-          );
-        }
+            }
+          >
+            <PassoverQuestGame />
+          </ErrorBoundary>
+        );
       case 'tubishvat':
         // צריך להוסיף את המשחק ט"ו בשבט אם יהיה מוכן
         return (
